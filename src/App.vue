@@ -25,6 +25,8 @@
           :user-id="userId"
           :selected-pool="selectedPool"
           @pool-selected="onPoolSelected"
+          @pool-created="onPoolCreated"
+          @pool-deleted="onPoolDeleted"
         />
 
         <!-- Pool Management Section -->
@@ -103,7 +105,7 @@
               <div class="feature-card">
                 <div class="feature-icon">👥</div>
                 <h4 class="feature-title">Manage Pools</h4>
-                <p class="feature-description">Organize and control worker pools for different workloads</p>
+                <p class="feature-description">Create, organize and control worker pools for different workloads</p>
               </div>
             </div>
           </div>
@@ -132,10 +134,22 @@ const isOwner = computed(() => {
   return selectedPool.value?.user_id === userId.value;
 });
 
-const onPoolSelected = (pool: Pool) => {
+const onPoolSelected = (pool: Pool | null) => {
   selectedPool.value = pool;
-  jobListKey.value++; // Force refresh of job list
-  progressGridKey.value++; // Force refresh of progress grid
+  if (pool) {
+    jobListKey.value++; // Force refresh of job list
+    progressGridKey.value++; // Force refresh of progress grid
+  }
+};
+
+const onPoolCreated = (pool: Pool) => {
+  // Pool creation is handled in PoolSelector, just refresh if needed
+  console.log('Pool created:', pool.name);
+};
+
+const onPoolDeleted = (poolId: string) => {
+  // Pool deletion is handled in PoolSelector, just refresh if needed
+  console.log('Pool deleted:', poolId);
 };
 
 const onJobSubmitted = (job: Job) => {
