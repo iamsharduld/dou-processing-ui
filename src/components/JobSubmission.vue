@@ -1,50 +1,83 @@
 <template>
   <div class="job-submission">
-    <div class="header">
-      <h3 class="title">Submit New Job</h3>
-      <p class="subtitle">Add a job to {{ pool.name }}</p>
+    <div class="submission-header">
+      <div class="header-content">
+        <h3 class="section-title">Submit New Job</h3>
+        <p class="section-subtitle">Queue a new job to {{ pool.name }}</p>
+      </div>
     </div>
 
-    <form @submit.prevent="submitJob" class="form">
-      <div class="form-group">
-        <label for="payload" class="label">Job Payload (JSON)</label>
-        <textarea
-          id="payload"
-          v-model="payloadText"
-          class="textarea"
-          :class="{ 'error': payloadError }"
-          placeholder='{"task": "example", "data": {"key": "value"}}'
-          rows="8"
-        ></textarea>
-        <div v-if="payloadError" class="error-message">{{ payloadError }}</div>
-        <div class="help-text">Enter valid JSON data for the job payload</div>
+    <form @submit.prevent="submitJob" class="submission-form">
+      <div class="form-section">
+        <label for="payload" class="form-label">Job Payload</label>
+        <div class="textarea-container">
+          <textarea
+            id="payload"
+            v-model="payloadText"
+            class="payload-textarea"
+            :class="{ 'has-error': payloadError }"
+            placeholder='{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}'
+            rows="10"
+          ></textarea>
+          <div class="textarea-footer">
+            <div class="validation-status">
+              <span v-if="isValidJson && payloadText.trim()" class="status-indicator valid">
+                <span class="status-dot"></span>
+                Valid JSON
+              </span>
+              <span v-else-if="payloadText.trim()" class="status-indicator invalid">
+                <span class="status-dot"></span>
+                Invalid JSON
+              </span>
+              <span v-else class="status-indicator empty">
+                <span class="status-dot"></span>
+                Enter JSON payload
+              </span>
+            </div>
+            <div class="character-count">
+              {{ payloadText.length }} characters
+            </div>
+          </div>
+        </div>
+        <div v-if="payloadError" class="error-message">
+          <span class="error-icon">⚠️</span>
+          {{ payloadError }}
+        </div>
+        <div class="help-text">
+          Enter valid JSON data that will be passed to the worker for processing
+        </div>
       </div>
 
       <div class="form-actions">
         <button
           type="submit"
-          class="submit-btn"
-          :disabled="loading || !payloadText.trim()"
+          class="submit-button"
+          :disabled="loading || !payloadText.trim() || !isValidJson"
         >
           <span v-if="loading" class="loading-spinner"></span>
-          {{ loading ? 'Submitting...' : 'Submit Job' }}
+          <span class="button-text">{{ loading ? 'Submitting...' : 'Submit Job' }}</span>
         </button>
       </div>
     </form>
 
-    <div v-if="recentJobs.length" class="recent-jobs">
-      <h4 class="recent-title">Recently Submitted</h4>
-      <div class="job-list">
+    <div v-if="recentJobs.length" class="recent-section">
+      <div class="recent-header">
+        <h4 class="recent-title">Recently Submitted</h4>
+        <span class="recent-count">{{ recentJobs.length }} jobs</span>
+      </div>
+      <div class="recent-list">
         <div
           v-for="job in recentJobs"
           :key="job.id"
-          class="job-item"
+          class="recent-item"
         >
           <div class="job-info">
             <span class="job-id">{{ job.id.slice(0, 8) }}...</span>
-            <span class="job-status" :class="job.status">{{ job.status }}</span>
+            <span class="job-status" :class="job.status">{{ formatStatus(job.status) }}</span>
           </div>
-          <div class="job-time">{{ formatTime(job.created_at) }}</div>
+          <div class="job-meta">
+            <span class="job-time">{{ formatTime(job.created_at) }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -65,7 +98,7 @@ const emit = defineEmits<{
   'job-submitted': [job: Job];
 }>();
 
-const payloadText = ref('{\n  "task": "example",\n  "data": {\n    "key": "value"\n  }\n}');
+const payloadText = ref('{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}');
 const payloadError = ref<string | null>(null);
 const loading = ref(false);
 const recentJobs = ref<Job[]>([]);
@@ -91,7 +124,7 @@ const validatePayload = () => {
     JSON.parse(payloadText.value);
     return true;
   } catch (e) {
-    payloadError.value = 'Invalid JSON format';
+    payloadError.value = 'Invalid JSON format. Please check your syntax.';
     return false;
   }
 };
@@ -112,7 +145,7 @@ const submitJob = async () => {
     }
     
     // Clear form
-    payloadText.value = '{\n  "task": "example",\n  "data": {\n    "key": "value"\n  }\n}';
+    payloadText.value = '{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}';
     
     emit('job-submitted', job);
   } catch (error) {
@@ -123,82 +156,180 @@ const submitJob = async () => {
   }
 };
 
+const formatStatus = (status: string) => {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
 const formatTime = (dateString: string) => {
-  return new Date(dateString).toLocaleTimeString();
+  return new Date(dateString).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 };
 </script>
 
 <style scoped>
 .job-submission {
   background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e8eaed;
+  margin-bottom: 32px;
 }
 
-.header {
-  margin-bottom: 24px;
+.submission-header {
+  margin-bottom: 32px;
 }
 
-.title {
+.section-title {
   font-size: 20px;
   font-weight: 600;
-  color: #1f2937;
+  color: #1a1d29;
   margin: 0 0 4px 0;
 }
 
-.subtitle {
-  color: #6b7280;
+.section-subtitle {
+  color: #5f6368;
   margin: 0;
   font-size: 14px;
 }
 
-.form-group {
-  margin-bottom: 24px;
+.form-section {
+  margin-bottom: 32px;
 }
 
-.label {
+.form-label {
   display: block;
   font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 8px;
+  font-weight: 600;
+  color: #1a1d29;
+  margin-bottom: 12px;
 }
 
-.textarea {
+.textarea-container {
+  position: relative;
+  border: 2px solid #e8eaed;
+  border-radius: 12px;
+  background: #fafbfc;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.textarea-container:focus-within {
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.textarea-container:has(.has-error) {
+  border-color: #ea4335;
+  background: #fef7f7;
+}
+
+.payload-textarea {
   width: 100%;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  padding: 16px;
   font-size: 14px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  line-height: 1.5;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  line-height: 1.6;
   resize: vertical;
-  transition: border-color 0.2s;
-  background: #f9fafb;
+  background: transparent;
+  color: #1a1d29;
+  min-height: 200px;
 }
 
-.textarea:focus {
+.payload-textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.textarea.error {
-  border-color: #ef4444;
+.payload-textarea::placeholder {
+  color: #9aa0a6;
+}
+
+.textarea-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+  background: rgba(250, 251, 252, 0.8);
+  border-radius: 0 0 10px 10px;
+}
+
+.validation-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.status-indicator.valid {
+  color: #00b894;
+}
+
+.status-indicator.valid .status-dot {
+  background: #00b894;
+}
+
+.status-indicator.invalid {
+  color: #ea4335;
+}
+
+.status-indicator.invalid .status-dot {
+  background: #ea4335;
+}
+
+.status-indicator.empty {
+  color: #9aa0a6;
+}
+
+.status-indicator.empty .status-dot {
+  background: #9aa0a6;
+}
+
+.character-count {
+  font-size: 12px;
+  color: #9aa0a6;
+  font-weight: 500;
 }
 
 .error-message {
-  color: #ef4444;
-  font-size: 12px;
-  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ea4335;
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 12px 16px;
+  background: #fef7f7;
+  border-radius: 8px;
+  border: 1px solid #fce8e6;
+}
+
+.error-icon {
+  font-size: 16px;
 }
 
 .help-text {
-  color: #6b7280;
-  font-size: 12px;
-  margin-top: 4px;
+  color: #5f6368;
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.4;
 }
 
 .form-actions {
@@ -206,28 +337,33 @@ const formatTime = (dateString: string) => {
   justify-content: flex-end;
 }
 
-.submit-btn {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
+.submit-button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 140px;
+  justify-content: center;
 }
 
-.submit-btn:hover:not(:disabled) {
-  background: #2563eb;
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
 }
 
-.submit-btn:disabled {
-  background: #9ca3af;
+.submit-button:disabled {
+  background: #9aa0a6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .loading-spinner {
@@ -239,33 +375,56 @@ const formatTime = (dateString: string) => {
   animation: spin 1s linear infinite;
 }
 
-.recent-jobs {
-  margin-top: 32px;
-  border-top: 1px solid #e5e7eb;
-  padding-top: 24px;
+.recent-section {
+  margin-top: 40px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 32px;
+}
+
+.recent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
 .recent-title {
   font-size: 16px;
   font-weight: 600;
-  color: #374151;
-  margin: 0 0 16px 0;
+  color: #1a1d29;
+  margin: 0;
 }
 
-.job-list {
+.recent-count {
+  background: #f8f9fa;
+  color: #5f6368;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #e8eaed;
+}
+
+.recent-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
-.job-item {
+.recent-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  padding: 16px;
+  background: #fafbfc;
+  border-radius: 10px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recent-item:hover {
+  background: #f8f9fa;
+  border-color: #e8eaed;
 }
 
 .job-info {
@@ -275,16 +434,17 @@ const formatTime = (dateString: string) => {
 }
 
 .job-id {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  color: #6b7280;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  color: #5f6368;
+  font-weight: 500;
 }
 
 .job-status {
-  padding: 4px 8px;
-  border-radius: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: capitalize;
 }
 
@@ -309,12 +469,35 @@ const formatTime = (dateString: string) => {
 }
 
 .job-time {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #9aa0a6;
+  font-weight: 500;
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .job-submission {
+    padding: 24px 20px;
+  }
+  
+  .recent-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .recent-item {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .job-info {
+    justify-content: space-between;
+  }
 }
 </style>
