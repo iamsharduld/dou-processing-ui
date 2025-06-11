@@ -1,5 +1,5 @@
 {
-  "name": "worker-pool-manager",
+  "name": "dou-processing-framework",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "vue": "^3.4.38",
-    "axios": "^1.6.8"
+    "axios": "^1.6.8",
+    "@heroicons/vue": "^2.0.18"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.3",
