@@ -185,7 +185,7 @@ body {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
 }
 
 .navbar-container {
@@ -556,3 +556,4 @@ body {
   }
 }
 </style>
+</template>
