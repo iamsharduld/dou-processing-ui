@@ -558,4 +558,3 @@ html, body {
   }
 }
 </style>
-</template>
