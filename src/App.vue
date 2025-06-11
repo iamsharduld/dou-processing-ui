@@ -59,6 +59,14 @@
               />
             </div>
 
+            <!-- Live Progress Grid -->
+            <div class="workspace-section">
+              <ProgressGrid
+                :pool="selectedPool"
+                :key="progressGridKey"
+              />
+            </div>
+
             <!-- Job List -->
             <div class="workspace-section">
               <JobList
@@ -107,6 +115,7 @@ import { ref, computed } from 'vue';
 import PoolSelector from './components/PoolSelector.vue';
 import JobSubmission from './components/JobSubmission.vue';
 import JobList from './components/JobList.vue';
+import ProgressGrid from './components/ProgressGrid.vue';
 import type { Pool, Job } from './types';
 
 // User ID - in a real app this would come from authentication
@@ -114,6 +123,7 @@ const userId = ref('user-123');
 const selectedPool = ref<Pool | null>(null);
 const refreshing = ref(false);
 const jobListKey = ref(0);
+const progressGridKey = ref(0);
 
 const isOwner = computed(() => {
   return selectedPool.value?.user_id === userId.value;
@@ -122,18 +132,21 @@ const isOwner = computed(() => {
 const onPoolSelected = (pool: Pool) => {
   selectedPool.value = pool;
   jobListKey.value++; // Force refresh of job list
+  progressGridKey.value++; // Force refresh of progress grid
 };
 
 const onJobSubmitted = (job: Job) => {
-  // Refresh job list when a new job is submitted
+  // Refresh both job list and progress grid when a new job is submitted
   jobListKey.value++;
+  progressGridKey.value++;
 };
 
 const refreshData = async () => {
   refreshing.value = true;
   try {
-    // Force refresh of job list
+    // Force refresh of both components
     jobListKey.value++;
+    progressGridKey.value++;
     await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for UX
   } finally {
     refreshing.value = false;
