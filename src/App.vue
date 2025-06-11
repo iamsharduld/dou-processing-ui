@@ -556,4 +556,3 @@ body {
   }
 }
 </style>
-</template>
