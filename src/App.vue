@@ -1,25 +1,25 @@
 <template>
   <div id="app">
-    <header class="app-header">
-      <div class="container">
-        <div class="header-content">
-          <div class="brand">
-            <div class="brand-icon">⚡</div>
-            <h1 class="brand-title">WorkerPool</h1>
-          </div>
-          <div class="user-section">
-            <div class="user-avatar">{{ userId.charAt(0).toUpperCase() }}</div>
-            <div class="user-details">
-              <span class="user-name">{{ userId }}</span>
-              <span class="user-role">Administrator</span>
-            </div>
+    <!-- Top Navigation Bar -->
+    <nav class="top-navbar">
+      <div class="navbar-container">
+        <div class="navbar-brand">
+          <div class="brand-icon">⚡</div>
+          <h1 class="brand-title">WorkerPool</h1>
+        </div>
+        <div class="navbar-user">
+          <div class="user-avatar">{{ userId.charAt(0).toUpperCase() }}</div>
+          <div class="user-details">
+            <span class="user-name">{{ userId }}</span>
+            <span class="user-role">Administrator</span>
           </div>
         </div>
       </div>
-    </header>
+    </nav>
 
-    <main class="main-content">
-      <div class="container">
+    <!-- Main Content Area -->
+    <main class="main-container">
+      <div class="content-wrapper">
         <!-- Pool Selection -->
         <PoolSelector
           :user-id="userId"
@@ -59,20 +59,23 @@
               />
             </div>
 
-            <!-- Live Progress Grid -->
-            <div class="workspace-section">
-              <ProgressGrid
-                :pool="selectedPool"
-                :key="progressGridKey"
-              />
-            </div>
+            <!-- Two Column Layout for Progress and Jobs -->
+            <div class="dual-column-layout">
+              <!-- Live Progress Grid -->
+              <div class="column-left">
+                <ProgressGrid
+                  :pool="selectedPool"
+                  :key="progressGridKey"
+                />
+              </div>
 
-            <!-- Job List -->
-            <div class="workspace-section">
-              <JobList
-                :pool="selectedPool"
-                :key="jobListKey"
-              />
+              <!-- Job List -->
+              <div class="column-right">
+                <JobList
+                  :pool="selectedPool"
+                  :key="jobListKey"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -164,7 +167,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #fafbfc;
+  background: #f8fafc;
   color: #1a1d29;
   line-height: 1.6;
 }
@@ -175,69 +178,68 @@ body {
   flex-direction: column;
 }
 
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-/* Header Styles */
-.app-header {
+/* Top Navigation Bar */
+.top-navbar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 20px 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.header-content {
+.navbar-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 16px 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.brand {
+.navbar-brand {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
 .brand-icon {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   backdrop-filter: blur(10px);
 }
 
 .brand-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: white;
   margin: 0;
   letter-spacing: -0.5px;
 }
 
-.user-section {
+.navbar-user {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .user-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.2);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
   backdrop-filter: blur(10px);
 }
 
@@ -249,19 +251,25 @@ body {
 
 .user-name {
   color: white;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .user-role {
   color: rgba(255, 255, 255, 0.8);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 /* Main Content */
-.main-content {
+.main-container {
   flex: 1;
-  padding: 32px 0;
+  background: #f8fafc;
+}
+
+.content-wrapper {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 32px;
 }
 
 /* Pool Workspace */
@@ -380,6 +388,19 @@ body {
   /* Sections will have their own styling */
 }
 
+/* Dual Column Layout */
+.dual-column-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.column-left,
+.column-right {
+  min-width: 0; /* Prevents grid overflow */
+}
+
 /* Welcome Workspace */
 .welcome-workspace {
   display: flex;
@@ -390,7 +411,7 @@ body {
 }
 
 .welcome-card {
-  max-width: 800px;
+  max-width: 900px;
   padding: 48px;
   background: white;
   border-radius: 20px;
@@ -426,7 +447,7 @@ body {
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
 }
 
@@ -469,14 +490,23 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .dual-column-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
 @media (max-width: 768px) {
-  .container {
-    padding: 0 16px;
+  .content-wrapper {
+    padding: 20px;
   }
   
-  .header-content {
+  .navbar-container {
+    padding: 12px 20px;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     align-items: flex-start;
   }
   
@@ -501,6 +531,28 @@ body {
   
   .feature-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .dual-column-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-container {
+    padding: 12px 16px;
+  }
+  
+  .content-wrapper {
+    padding: 16px;
+  }
+  
+  .brand-title {
+    font-size: 20px;
+  }
+  
+  .pool-title {
+    font-size: 24px;
   }
 }
 </style>
