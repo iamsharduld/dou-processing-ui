@@ -1,7 +1,7 @@
 import axios from 'axios';
-import type { JobSubmission, QueueItem } from '../types';
+import type { Pool, Job, Worker, PoolStats, CategorizedPools, JobStatus } from '../types';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+const API_BASE_URL = 'http://localhost:8000'; // Adjust this to your FastAPI server URL
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -10,77 +10,58 @@ const api = axios.create({
   },
 });
 
-export class DoUApiService {
-  static async submitJob(job: JobSubmission): Promise<JobSubmission> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const submittedJob: JobSubmission = {
-      ...job,
-      id: `job_${Date.now()}`,
-      status: 'submitted' as any,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      progress: 0,
-      estimatedCompletion: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-    };
-    
-    return submittedJob;
+export class ApiService {
+  // Pool operations
+  static async getCategorizedPools(userId: string): Promise<CategorizedPools> {
+    const response = await api.get(`/pools/categorized?user_id=${userId}`);
+    return response.data;
   }
 
-  static async getJobQueue(): Promise<QueueItem[]> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    return [
-      {
-        id: 'job_001',
-        name: 'Neural Network Training - Model A',
-        status: 'processing' as any,
-        priority: 'high',
-        submittedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        progress: 65,
-        estimatedCompletion: new Date(Date.now() + 10 * 60 * 1000).toISOString()
-      },
-      {
-        id: 'job_002',
-        name: 'Data Preprocessing - Dataset B',
-        status: 'queued' as any,
-        priority: 'medium',
-        submittedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        estimatedCompletion: new Date(Date.now() + 25 * 60 * 1000).toISOString()
-      },
-      {
-        id: 'job_003',
-        name: 'Model Validation - Batch C',
-        status: 'completed' as any,
-        priority: 'low',
-        submittedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-        progress: 100
-      }
-    ];
+  static async getAllPools(): Promise<Pool[]> {
+    const response = await api.get('/pools');
+    return response.data;
   }
 
-  static async getJobStatus(jobId: string): Promise<JobSubmission> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return {
-      id: jobId,
-      name: 'Sample Job',
-      inputFile1Path: '/path/to/file1.dat',
-      inputFile2Path: '/path/to/file2.dat',
-      parameters: {
-        processingMode: 'standard',
-        priority: 'medium',
-        outputFormat: 'json',
-        enableLogging: true,
-        maxProcessingTime: 60
-      },
-      status: 'processing' as any,
-      progress: 45,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+  static async createPool(name: string, userId: string): Promise<Pool> {
+    const response = await api.post('/pools', { name, user_id: userId });
+    return response.data;
+  }
+
+  static async deletePool(poolId: string, userId: string): Promise<void> {
+    await api.delete(`/pools/${poolId}?user_id=${userId}`);
+  }
+
+  // Job operations
+  static async getPoolJobs(poolId: string, status?: JobStatus): Promise<Job[]> {
+    const params = status ? `?status=${status}` : '';
+    const response = await api.get(`/pools/${poolId}/jobs${params}`);
+    return response.data;
+  }
+
+  static async submitJob(poolId: string, payload: Record<string, any>, userId: string): Promise<Job> {
+    const response = await api.post(`/pools/${poolId}/jobs?user_id=${userId}`, { payload });
+    return response.data;
+  }
+
+  static async getJob(jobId: string): Promise<Job> {
+    const response = await api.get(`/jobs/${jobId}`);
+    return response.data;
+  }
+
+  static async updateJobProgress(jobId: string, progress: number, status?: JobStatus): Promise<Job> {
+    const response = await api.post(`/jobs/${jobId}/progress`, { progress, status });
+    return response.data;
+  }
+
+  // Worker operations
+  static async getPoolWorkers(poolId: string): Promise<Worker[]> {
+    const response = await api.get(`/pools/${poolId}/workers`);
+    return response.data;
+  }
+
+  // Stats
+  static async getPoolStats(poolId: string): Promise<PoolStats> {
+    const response = await api.get(`/pools/${poolId}/stats`);
+    return response.data;
   }
 }
