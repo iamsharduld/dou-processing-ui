@@ -162,8 +162,9 @@ const refreshData = async () => {
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
+  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -186,6 +187,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 1000;
+  width: 100%;
 }
 
 .navbar-container {
@@ -556,3 +558,4 @@ body {
   }
 }
 </style>
+</template>
