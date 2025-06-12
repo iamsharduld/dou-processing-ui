@@ -81,35 +81,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Welcome State -->
-        <div v-else class="welcome-workspace">
-          <div class="welcome-card">
-            <div class="welcome-header">
-              <div class="welcome-icon">⚡</div>
-              <h2 class="welcome-title">Welcome to WorkerPool</h2>
-              <p class="welcome-subtitle">Select a worker pool to start managing jobs and monitoring performance</p>
-            </div>
-            
-            <div class="feature-grid">
-              <div class="feature-card">
-                <div class="feature-icon">📝</div>
-                <h4 class="feature-title">Submit Jobs</h4>
-                <p class="feature-description">Queue new jobs with custom payloads and track their execution</p>
-              </div>
-              <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h4 class="feature-title">Monitor Progress</h4>
-                <p class="feature-description">Real-time tracking of job status and worker activity</p>
-              </div>
-              <div class="feature-card">
-                <div class="feature-icon">👥</div>
-                <h4 class="feature-title">Manage Pools</h4>
-                <p class="feature-description">Create, organize and control worker pools for different workloads</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </main>
   </div>
@@ -417,90 +388,6 @@ html, body {
   min-width: 0; /* Prevents grid overflow */
 }
 
-/* Welcome Workspace */
-.welcome-workspace {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 500px;
-  margin-top: 32px;
-}
-
-.welcome-card {
-  max-width: 900px;
-  padding: 48px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e8eaed;
-  text-align: center;
-}
-
-.welcome-header {
-  margin-bottom: 48px;
-}
-
-.welcome-icon {
-  font-size: 64px;
-  margin-bottom: 24px;
-  opacity: 0.8;
-}
-
-.welcome-title {
-  font-size: 36px;
-  font-weight: 700;
-  color: #1a1d29;
-  margin: 0 0 16px 0;
-  letter-spacing: -0.5px;
-}
-
-.welcome-subtitle {
-  font-size: 18px;
-  color: #5f6368;
-  margin: 0;
-  line-height: 1.6;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
-}
-
-.feature-card {
-  padding: 32px 24px;
-  background: #fafbfc;
-  border-radius: 16px;
-  border: 1px solid #e8eaed;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  border-color: #dadce0;
-}
-
-.feature-icon {
-  font-size: 40px;
-  margin-bottom: 16px;
-  opacity: 0.8;
-}
-
-.feature-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1d29;
-  margin: 0 0 8px 0;
-}
-
-.feature-description {
-  color: #5f6368;
-  margin: 0;
-  line-height: 1.5;
-  font-size: 14px;
-}
-
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -535,18 +422,6 @@ html, body {
   
   .workspace-actions {
     justify-content: flex-end;
-  }
-  
-  .welcome-card {
-    padding: 32px 24px;
-  }
-  
-  .welcome-title {
-    font-size: 28px;
-  }
-  
-  .feature-grid {
-    grid-template-columns: 1fr;
   }
   
   .dual-column-layout {
