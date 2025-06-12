@@ -37,51 +37,179 @@
       </div>
     </div>
 
-    <!-- Job Submission Form (only for owned pools) -->
+    <!-- Job Submission Section (only for owned pools) -->
     <div v-if="isOwner" class="submission-section">
-      <form @submit.prevent="submitJob" class="submission-form">
-        <div class="form-section">
-          <label for="payload" class="form-label">Submit New Job</label>
-          <div class="textarea-container">
-            <textarea
-              id="payload"
-              v-model="payloadText"
-              class="payload-textarea"
-              :class="{ 'has-error': payloadError }"
-              placeholder='{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}'
-              rows="6"
-            ></textarea>
-            <div class="textarea-footer">
-              <div class="validation-status">
-                <span v-if="isValidJson && payloadText.trim()" class="status-indicator valid">
-                  <span class="status-dot"></span>
-                  Valid JSON
-                </span>
-                <span v-else-if="payloadText.trim()" class="status-indicator invalid">
-                  <span class="status-dot"></span>
-                  Invalid JSON
-                </span>
-                <span v-else class="status-indicator empty">
-                  <span class="status-dot"></span>
-                  Enter JSON payload
-                </span>
+      <div class="submission-header">
+        <h4 class="submission-title">Submit New Jobs</h4>
+        <div class="submission-tabs">
+          <button 
+            @click="submissionMode = 'single'" 
+            class="tab-button" 
+            :class="{ active: submissionMode === 'single' }"
+          >
+            Single Job
+          </button>
+          <button 
+            @click="submissionMode = 'batch'" 
+            class="tab-button" 
+            :class="{ active: submissionMode === 'batch' }"
+          >
+            Batch Upload
+          </button>
+        </div>
+      </div>
+
+      <!-- Single Job Submission -->
+      <div v-if="submissionMode === 'single'" class="single-job-form">
+        <form @submit.prevent="submitSingleJob" class="submission-form">
+          <div class="form-section">
+            <label for="payload" class="form-label">Job Payload</label>
+            <div class="textarea-container">
+              <textarea
+                id="payload"
+                v-model="payloadText"
+                class="payload-textarea"
+                :class="{ 'has-error': payloadError }"
+                placeholder='{\n  "upd_id": "12345",\n  "trace_file_path": "/path/to/trace.txt",\n  "modification_file": "/path/to/mod.json"\n}'
+                rows="6"
+              ></textarea>
+              <div class="textarea-footer">
+                <div class="validation-status">
+                  <span v-if="isValidJson && payloadText.trim()" class="status-indicator valid">
+                    <span class="status-dot"></span>
+                    Valid JSON
+                  </span>
+                  <span v-else-if="payloadText.trim()" class="status-indicator invalid">
+                    <span class="status-dot"></span>
+                    Invalid JSON
+                  </span>
+                  <span v-else class="status-indicator empty">
+                    <span class="status-dot"></span>
+                    Enter JSON payload
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  class="submit-button"
+                  :disabled="submitting || !payloadText.trim() || !isValidJson"
+                >
+                  <span v-if="submitting" class="loading-spinner"></span>
+                  <span class="button-text">{{ submitting ? 'Submitting...' : 'Submit Job' }}</span>
+                </button>
               </div>
-              <button
-                type="submit"
-                class="submit-button"
-                :disabled="submitting || !payloadText.trim() || !isValidJson"
+            </div>
+            <div v-if="payloadError" class="error-message">
+              <span class="error-icon">⚠️</span>
+              {{ payloadError }}
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Batch Job Submission -->
+      <div v-if="submissionMode === 'batch'" class="batch-job-form">
+        <!-- File Upload -->
+        <div class="file-upload-section">
+          <div class="upload-area" :class="{ 'drag-over': isDragOver }" @drop="handleDrop" @dragover.prevent @dragenter.prevent="isDragOver = true" @dragleave.prevent="isDragOver = false">
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".xlsx,.xls"
+              @change="handleFileSelect"
+              class="file-input"
+            />
+            <div class="upload-content">
+              <div class="upload-icon">📊</div>
+              <div class="upload-text">
+                <h5 class="upload-title">Upload Excel File</h5>
+                <p class="upload-description">
+                  Drop your Excel file here or <button type="button" @click="$refs.fileInput.click()" class="upload-link">browse files</button>
+                </p>
+                <p class="upload-format">
+                  Expected columns: <strong>upd_id</strong>, <strong>trace_file_path</strong>, <strong>modification_file</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="uploadError" class="error-message">
+            <span class="error-icon">⚠️</span>
+            {{ uploadError }}
+          </div>
+        </div>
+
+        <!-- Job Preview Table -->
+        <div v-if="batchJobs.length > 0" class="job-preview-section">
+          <div class="preview-header">
+            <h5 class="preview-title">Job Preview ({{ batchJobs.length }} jobs)</h5>
+            <div class="preview-actions">
+              <button @click="clearBatchJobs" class="clear-preview-button">
+                <span class="button-icon">🗑️</span>
+                Clear
+              </button>
+              <button 
+                @click="submitBatchJobs" 
+                class="submit-batch-button"
+                :disabled="submittingBatch || batchJobs.length === 0"
               >
-                <span v-if="submitting" class="loading-spinner"></span>
-                <span class="button-text">{{ submitting ? 'Submitting...' : 'Submit Job' }}</span>
+                <span v-if="submittingBatch" class="loading-spinner"></span>
+                <span>{{ submittingBatch ? `Submitting... (${batchSubmissionProgress}/${batchJobs.length})` : 'Submit All Jobs' }}</span>
               </button>
             </div>
           </div>
-          <div v-if="payloadError" class="error-message">
+
+          <div class="preview-table-container">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th class="row-number">#</th>
+                  <th class="upd-id">UPD ID</th>
+                  <th class="trace-file">Trace File Path</th>
+                  <th class="mod-file">Modification File</th>
+                  <th class="status">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr 
+                  v-for="(job, index) in batchJobs" 
+                  :key="index"
+                  class="preview-row"
+                  :class="{ 
+                    'submitted': job.submitted, 
+                    'submitting': job.submitting,
+                    'error': job.error 
+                  }"
+                >
+                  <td class="row-number">{{ index + 1 }}</td>
+                  <td class="upd-id">{{ job.upd_id }}</td>
+                  <td class="trace-file">{{ job.trace_file_path }}</td>
+                  <td class="mod-file">{{ job.modification_file }}</td>
+                  <td class="status">
+                    <span v-if="job.submitting" class="status-badge submitting">
+                      <span class="loading-spinner small"></span>
+                      Submitting
+                    </span>
+                    <span v-else-if="job.submitted" class="status-badge submitted">
+                      ✅ Submitted
+                    </span>
+                    <span v-else-if="job.error" class="status-badge error">
+                      ❌ Error
+                    </span>
+                    <span v-else class="status-badge pending">
+                      ⏳ Pending
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="batchSubmissionError" class="error-message">
             <span class="error-icon">⚠️</span>
-            {{ payloadError }}
+            {{ batchSubmissionError }}
           </div>
         </div>
-      </form>
+      </div>
     </div>
 
     <!-- Jobs Section -->
@@ -363,6 +491,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { ApiService } from '../services/api';
 import type { Pool, Job, JobStatus } from '../types';
+import * as XLSX from 'xlsx';
 
 const props = defineProps<{
   pool: Pool;
@@ -373,10 +502,30 @@ const emit = defineEmits<{
   'job-submitted': [job: Job];
 }>();
 
-// Job submission
-const payloadText = ref('{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}');
+// Submission mode
+const submissionMode = ref<'single' | 'batch'>('single');
+
+// Single job submission
+const payloadText = ref('{\n  "upd_id": "12345",\n  "trace_file_path": "/path/to/trace.txt",\n  "modification_file": "/path/to/mod.json"\n}');
 const payloadError = ref<string | null>(null);
 const submitting = ref(false);
+
+// Batch job submission
+interface BatchJob {
+  upd_id: string;
+  trace_file_path: string;
+  modification_file: string;
+  submitted?: boolean;
+  submitting?: boolean;
+  error?: string;
+}
+
+const batchJobs = ref<BatchJob[]>([]);
+const isDragOver = ref(false);
+const uploadError = ref<string | null>(null);
+const submittingBatch = ref(false);
+const batchSubmissionProgress = ref(0);
+const batchSubmissionError = ref<string | null>(null);
 
 // Jobs data
 const jobs = ref<Job[]>([]);
@@ -435,6 +584,200 @@ const jobStats = computed(() => {
   return stats;
 });
 
+// File handling functions
+const handleFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (file) {
+    processExcelFile(file);
+  }
+};
+
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault();
+  isDragOver.value = false;
+  
+  const file = event.dataTransfer?.files[0];
+  if (file) {
+    processExcelFile(file);
+  }
+};
+
+const processExcelFile = async (file: File) => {
+  try {
+    uploadError.value = null;
+    
+    // Validate file type
+    if (!file.name.match(/\.(xlsx|xls)$/)) {
+      uploadError.value = 'Please upload a valid Excel file (.xlsx or .xls)';
+      return;
+    }
+    
+    // Read file
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    
+    // Get first worksheet
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    
+    // Convert to JSON
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+    
+    if (jsonData.length < 2) {
+      uploadError.value = 'Excel file must contain at least a header row and one data row';
+      return;
+    }
+    
+    // Get headers
+    const headers = jsonData[0].map((h: any) => String(h).toLowerCase().trim());
+    
+    // Validate required columns
+    const requiredColumns = ['upd_id', 'trace_file_path', 'modification_file'];
+    const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+    
+    if (missingColumns.length > 0) {
+      uploadError.value = `Missing required columns: ${missingColumns.join(', ')}`;
+      return;
+    }
+    
+    // Get column indices
+    const updIdIndex = headers.indexOf('upd_id');
+    const traceFileIndex = headers.indexOf('trace_file_path');
+    const modFileIndex = headers.indexOf('modification_file');
+    
+    // Process data rows
+    const processedJobs: BatchJob[] = [];
+    
+    for (let i = 1; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      
+      // Skip empty rows
+      if (!row || row.every(cell => !cell)) continue;
+      
+      const job: BatchJob = {
+        upd_id: String(row[updIdIndex] || '').trim(),
+        trace_file_path: String(row[traceFileIndex] || '').trim(),
+        modification_file: String(row[modFileIndex] || '').trim()
+      };
+      
+      // Validate required fields
+      if (!job.upd_id || !job.trace_file_path || !job.modification_file) {
+        uploadError.value = `Row ${i + 1}: All fields (upd_id, trace_file_path, modification_file) are required`;
+        return;
+      }
+      
+      processedJobs.push(job);
+    }
+    
+    if (processedJobs.length === 0) {
+      uploadError.value = 'No valid job data found in the Excel file';
+      return;
+    }
+    
+    batchJobs.value = processedJobs;
+    
+  } catch (error) {
+    console.error('Error processing Excel file:', error);
+    uploadError.value = 'Failed to process Excel file. Please check the file format.';
+  }
+};
+
+const clearBatchJobs = () => {
+  batchJobs.value = [];
+  uploadError.value = null;
+  batchSubmissionError.value = null;
+  batchSubmissionProgress.value = 0;
+};
+
+const submitSingleJob = async () => {
+  if (!validatePayload()) return;
+  
+  try {
+    submitting.value = true;
+    
+    const payload = JSON.parse(payloadText.value);
+    const job = await ApiService.submitJob(props.pool.id, payload, props.userId);
+    
+    // Clear form
+    payloadText.value = '{\n  "upd_id": "12345",\n  "trace_file_path": "/path/to/trace.txt",\n  "modification_file": "/path/to/mod.json"\n}';
+    
+    // Refresh jobs
+    await loadJobs();
+    
+    emit('job-submitted', job);
+  } catch (error) {
+    console.error('Error submitting job:', error);
+    payloadError.value = 'Failed to submit job. Please try again.';
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const submitBatchJobs = async () => {
+  if (batchJobs.value.length === 0) return;
+  
+  try {
+    submittingBatch.value = true;
+    batchSubmissionError.value = null;
+    batchSubmissionProgress.value = 0;
+    
+    // Reset all job statuses
+    batchJobs.value.forEach(job => {
+      job.submitted = false;
+      job.submitting = false;
+      job.error = undefined;
+    });
+    
+    // Submit jobs one by one
+    for (let i = 0; i < batchJobs.value.length; i++) {
+      const batchJob = batchJobs.value[i];
+      
+      try {
+        batchJob.submitting = true;
+        
+        const payload = {
+          upd_id: batchJob.upd_id,
+          trace_file_path: batchJob.trace_file_path,
+          modification_file: batchJob.modification_file
+        };
+        
+        await ApiService.submitJob(props.pool.id, payload, props.userId);
+        
+        batchJob.submitted = true;
+        batchJob.submitting = false;
+        batchSubmissionProgress.value = i + 1;
+        
+        // Small delay to prevent overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.error(`Error submitting job ${i + 1}:`, error);
+        batchJob.error = 'Failed to submit';
+        batchJob.submitting = false;
+        batchSubmissionProgress.value = i + 1;
+      }
+    }
+    
+    // Refresh jobs after all submissions
+    await loadJobs();
+    
+    // Check if all jobs were submitted successfully
+    const successfulJobs = batchJobs.value.filter(job => job.submitted).length;
+    const failedJobs = batchJobs.value.filter(job => job.error).length;
+    
+    if (failedJobs > 0) {
+      batchSubmissionError.value = `${successfulJobs} jobs submitted successfully, ${failedJobs} failed`;
+    }
+    
+  } catch (error) {
+    console.error('Error in batch submission:', error);
+    batchSubmissionError.value = 'Batch submission failed. Please try again.';
+  } finally {
+    submittingBatch.value = false;
+  }
+};
+
 const loadJobs = async () => {
   try {
     loading.value = true;
@@ -479,30 +822,6 @@ const loadHistoryJobs = async () => {
     console.error('Error loading history:', e);
   } finally {
     loadingHistory.value = false;
-  }
-};
-
-const submitJob = async () => {
-  if (!validatePayload()) return;
-  
-  try {
-    submitting.value = true;
-    
-    const payload = JSON.parse(payloadText.value);
-    const job = await ApiService.submitJob(props.pool.id, payload, props.userId);
-    
-    // Clear form
-    payloadText.value = '{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}';
-    
-    // Refresh jobs
-    await loadJobs();
-    
-    emit('job-submitted', job);
-  } catch (error) {
-    console.error('Error submitting job:', error);
-    payloadError.value = 'Failed to submit job. Please try again.';
-  } finally {
-    submitting.value = false;
   }
 };
 
@@ -625,13 +944,20 @@ const getETA = (job: Job) => {
 };
 
 const getTaskName = (payload: Record<string, any>) => {
+  if (payload.upd_id) return `UPD ${payload.upd_id}`;
   return payload.task || payload.name || payload.type || 'Unknown Task';
 };
 
 const getTaskDetails = (payload: Record<string, any>) => {
   const details = [];
-  if (payload.parameters?.input) details.push(`Input: ${String(payload.parameters.input).slice(0, 15)}...`);
-  if (payload.timeout) details.push(`${payload.timeout}s`);
+  if (payload.trace_file_path) {
+    const fileName = payload.trace_file_path.split('/').pop() || payload.trace_file_path;
+    details.push(`Trace: ${fileName}`);
+  }
+  if (payload.modification_file) {
+    const fileName = payload.modification_file.split('/').pop() || payload.modification_file;
+    details.push(`Mod: ${fileName}`);
+  }
   return details.join(' • ') || 'No details';
 };
 
@@ -825,6 +1151,55 @@ onUnmounted(() => {
   border-bottom: 1px solid #f0f0f0;
 }
 
+.submission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.submission-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1d29;
+  margin: 0;
+}
+
+.submission-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.tab-button {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-button.active {
+  background: white;
+  color: #1a1d29;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button:hover:not(.active) {
+  color: #374151;
+}
+
+/* Single Job Form */
+.single-job-form {
+  /* Existing single job form styles */
+}
+
 .form-label {
   display: block;
   font-size: 14px;
@@ -946,6 +1321,256 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
+/* Batch Job Form */
+.batch-job-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.file-upload-section {
+  /* File upload styles */
+}
+
+.upload-area {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #fafbfc;
+}
+
+.upload-area:hover, .upload-area.drag-over {
+  border-color: #667eea;
+  background: #f8faff;
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.upload-icon {
+  font-size: 48px;
+  opacity: 0.6;
+}
+
+.upload-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1d29;
+  margin: 0;
+}
+
+.upload-description {
+  color: #6b7280;
+  margin: 0;
+  font-size: 14px;
+}
+
+.upload-link {
+  color: #667eea;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.upload-format {
+  color: #9ca3af;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* Job Preview */
+.job-preview-section {
+  /* Preview section styles */
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.preview-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1d29;
+  margin: 0;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.clear-preview-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 2px solid #fecaca;
+  background: rgba(254, 202, 202, 0.1);
+  color: #dc2626;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clear-preview-button:hover {
+  border-color: #fca5a5;
+  background: rgba(254, 202, 202, 0.2);
+}
+
+.submit-batch-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.submit-batch-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.submit-batch-button:disabled {
+  background: #9aa0a6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.preview-table-container {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.preview-table th {
+  background: #f8fafc;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.preview-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  color: #1a1d29;
+}
+
+.preview-row {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preview-row:hover {
+  background: #f8fafc;
+}
+
+.preview-row.submitted {
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.preview-row.submitting {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.preview-row.error {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.row-number {
+  width: 60px;
+  text-align: center;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.upd-id {
+  width: 120px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.trace-file, .mod-file {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  width: 120px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.submitting {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.submitted {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .loading-spinner {
   width: 14px;
   height: 14px;
@@ -956,8 +1581,8 @@ onUnmounted(() => {
 }
 
 .loading-spinner.small {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border-width: 2px;
   margin: 0;
 }
@@ -1402,7 +2027,6 @@ onUnmounted(() => {
   padding: 0 24px 24px 24px;
 }
 
-/* Detail Grid */
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1459,10 +2083,10 @@ onUnmounted(() => {
 .payload-full {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 20px;
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
   color: #1a1d29;
   margin: 0;
@@ -1738,6 +2362,12 @@ onUnmounted(() => {
     flex-wrap: wrap;
   }
   
+  .submission-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  
   .jobs-header {
     flex-direction: column;
     align-items: stretch;
@@ -1780,6 +2410,19 @@ onUnmounted(() => {
   
   .form-actions {
     flex-direction: column;
+  }
+  
+  .preview-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .preview-table-container {
+    overflow-x: auto;
+  }
+  
+  .preview-table {
+    min-width: 600px;
   }
 }
 </style>
