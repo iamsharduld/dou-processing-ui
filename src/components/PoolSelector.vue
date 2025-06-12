@@ -329,19 +329,19 @@ onMounted(() => {
 <style scoped>
 .pool-selector {
   background: white;
-  border-radius: 16px;
-  padding: 32px;
+  border-radius: 12px;
+  padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #e8eaed;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .selector-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 32px;
-  gap: 24px;
+  margin-bottom: 20px;
+  gap: 20px;
 }
 
 .header-content {
@@ -349,18 +349,18 @@ onMounted(() => {
 }
 
 .section-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   color: #1a1d29;
-  margin: 0 0 8px 0;
-  letter-spacing: -0.3px;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.2px;
 }
 
 .section-subtitle {
   color: #5f6368;
   margin: 0;
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .header-actions {
@@ -371,15 +371,15 @@ onMounted(() => {
 .create-button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   border: none;
-  padding: 12px 20px;
-  border-radius: 10px;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -389,7 +389,7 @@ onMounted(() => {
 }
 
 .button-icon {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
 }
 
@@ -399,17 +399,17 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 64px 0;
+  padding: 40px 0;
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f0f0f0;
-  border-top: 3px solid #667eea;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #f0f0f0;
+  border-top: 2px solid #667eea;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .loading-spinner.small {
@@ -422,18 +422,18 @@ onMounted(() => {
 .loading-text {
   color: #5f6368;
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* Error State */
 .error-state {
   text-align: center;
-  padding: 64px 0;
+  padding: 40px 0;
 }
 
 .error-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: 32px;
+  margin-bottom: 12px;
   opacity: 0.8;
 }
 
@@ -459,10 +459,11 @@ onMounted(() => {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 10px;
+  padding: 10px 20px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 13px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -473,7 +474,7 @@ onMounted(() => {
 
 /* Pool Categories */
 .pool-category {
-  margin-bottom: 40px;
+  margin-bottom: 24px;
 }
 
 .pool-category:last-child {
@@ -484,11 +485,11 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .category-title {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   color: #1a1d29;
   margin: 0;
@@ -497,24 +498,24 @@ onMounted(() => {
 .category-count {
   background: #f8f9fa;
   color: #5f6368;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 14px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 600;
   border: 1px solid #e8eaed;
 }
 
 .pool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
 
 /* Pool Cards */
 .pool-card {
   border: 2px solid #e8eaed;
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: 10px;
+  padding: 16px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: white;
@@ -528,7 +529,7 @@ onMounted(() => {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 3px;
   background: transparent;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -543,14 +544,14 @@ onMounted(() => {
 
 .pool-card:hover {
   border-color: #dadce0;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .pool-card.active {
   border-color: #667eea;
   background: #fafbff;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 2px 12px rgba(102, 126, 234, 0.12);
 }
 
 .card-header {
@@ -564,34 +565,34 @@ onMounted(() => {
 }
 
 .pool-name {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: #1a1d29;
-  margin: 0 0 4px 0;
+  margin: 0 0 2px 0;
   line-height: 1.3;
 }
 
 .pool-date {
   color: #5f6368;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .pool-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ownership-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .ownership-indicator.owner {
@@ -605,8 +606,8 @@ onMounted(() => {
 }
 
 .indicator-dot {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: currentColor;
 }
@@ -615,11 +616,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   background: rgba(234, 67, 53, 0.1);
   border: 1px solid rgba(234, 67, 53, 0.2);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: #ea4335;
@@ -632,46 +633,46 @@ onMounted(() => {
 }
 
 .delete-icon {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 64px 0;
+  padding: 40px 0;
 }
 
 .empty-icon {
-  font-size: 64px;
-  margin-bottom: 24px;
+  font-size: 48px;
+  margin-bottom: 16px;
   opacity: 0.6;
 }
 
 .empty-title {
   color: #1a1d29;
-  margin: 0 0 8px 0;
-  font-size: 20px;
+  margin: 0 0 6px 0;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .empty-message {
   color: #5f6368;
-  margin: 0 0 24px 0;
-  font-size: 16px;
+  margin: 0 0 20px 0;
+  font-size: 14px;
 }
 
 .create-first-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   border: none;
-  padding: 14px 28px;
-  border-radius: 12px;
+  padding: 10px 20px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -915,13 +916,13 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .pool-selector {
-    padding: 24px 20px;
+    padding: 16px;
   }
   
   .selector-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 20px;
+    gap: 16px;
   }
   
   .pool-grid {
@@ -931,7 +932,7 @@ onMounted(() => {
   .card-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
+    gap: 12px;
   }
   
   .pool-actions {
