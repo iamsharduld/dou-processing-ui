@@ -73,7 +73,7 @@ import JobManager from './components/JobManager.vue';
 import type { Pool, Job } from './types';
 
 // User ID - in a real app this would come from authentication
-const userId = ref('user-123');
+const userId = ref('test_user_1');
 const selectedPool = ref<Pool | null>(null);
 const refreshing = ref(false);
 const jobManagerKey = ref(0);
