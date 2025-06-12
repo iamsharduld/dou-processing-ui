@@ -84,7 +84,7 @@
       </form>
     </div>
 
-    <!-- Jobs List -->
+    <!-- Jobs Section -->
     <div class="jobs-section">
       <div v-if="loading && !jobs.length" class="loading-state">
         <div class="loading-spinner"></div>
@@ -106,16 +106,28 @@
 
       <div v-else class="jobs-container">
         <div class="jobs-header">
-          <h4 class="jobs-title">Your Jobs ({{ userJobs.length }})</h4>
-          <div class="jobs-stats">
-            <span class="stat pending" v-if="jobStats.pending">{{ jobStats.pending }} Pending</span>
-            <span class="stat in-progress" v-if="jobStats.in_progress">{{ jobStats.in_progress }} Active</span>
-            <span class="stat completed" v-if="jobStats.completed">{{ jobStats.completed }} Done</span>
-            <span class="stat failed" v-if="jobStats.failed">{{ jobStats.failed }} Failed</span>
+          <div class="header-left">
+            <h4 class="jobs-title">Your Jobs</h4>
+            <div class="jobs-count">{{ userJobs.length }} total</div>
+          </div>
+          <div class="header-right">
+            <div class="jobs-stats">
+              <span class="stat pending" v-if="jobStats.pending">{{ jobStats.pending }} Pending</span>
+              <span class="stat in-progress" v-if="jobStats.in_progress">{{ jobStats.in_progress }} Active</span>
+              <span class="stat completed" v-if="jobStats.completed">{{ jobStats.completed }} Done</span>
+              <span class="stat failed" v-if="jobStats.failed">{{ jobStats.failed }} Failed</span>
+            </div>
+            <div class="view-controls">
+              <select v-model="viewMode" class="view-selector">
+                <option value="grid">Grid View</option>
+                <option value="list">List View</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="jobs-grid">
+        <!-- Grid View -->
+        <div v-if="viewMode === 'grid'" class="jobs-grid">
           <div
             v-for="job in userJobs"
             :key="job.id"
@@ -168,6 +180,61 @@
                   <span class="button-icon">👁️</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- List View -->
+        <div v-else class="jobs-list">
+          <div class="list-header">
+            <div class="header-cell job-col">Job</div>
+            <div class="header-cell status-col">Status</div>
+            <div class="header-cell progress-col">Progress</div>
+            <div class="header-cell task-col">Task</div>
+            <div class="header-cell time-col">Time</div>
+            <div class="header-cell actions-col">Actions</div>
+          </div>
+          <div
+            v-for="job in userJobs"
+            :key="job.id"
+            class="job-row"
+            :class="[job.status, { 'recently-updated': isRecentlyUpdated(job) }]"
+            @click="viewJobDetails(job)"
+          >
+            <div class="row-cell job-col">
+              <div class="job-info">
+                <span class="job-id">{{ job.id.slice(0, 8) }}</span>
+                <span class="job-created">{{ formatRelativeTime(job.created_at) }}</span>
+              </div>
+            </div>
+            <div class="row-cell status-col">
+              <span class="job-status" :class="job.status">{{ formatStatus(job.status) }}</span>
+            </div>
+            <div class="row-cell progress-col">
+              <div v-if="job.status === 'in_progress' && job.progress" class="progress-inline">
+                <div class="progress-bar small">
+                  <div class="progress-fill" :style="{ width: `${job.progress}%` }"></div>
+                </div>
+                <span class="progress-text">{{ job.progress }}%</span>
+              </div>
+              <span v-else class="no-progress">—</span>
+            </div>
+            <div class="row-cell task-col">
+              <div class="task-info">
+                <span class="task-name">{{ getTaskName(job.payload) }}</span>
+                <span class="task-details">{{ getTaskDetails(job.payload) }}</span>
+              </div>
+            </div>
+            <div class="row-cell time-col">
+              <div class="time-info">
+                <span class="elapsed-time">{{ getElapsedTime(job.created_at) }}</span>
+                <span v-if="getETA(job)" class="eta-time">ETA: {{ getETA(job) }}</span>
+              </div>
+            </div>
+            <div class="row-cell actions-col">
+              <button class="details-button small">
+                <span class="button-icon">👁️</span>
+              </button>
             </div>
           </div>
         </div>
@@ -382,6 +449,7 @@ const error = ref<string | null>(null);
 const autoRefresh = ref(true);
 const isLive = ref(false);
 const jobHistory = ref<Map<string, Job[]>>(new Map());
+const viewMode = ref<'grid' | 'list'>('grid');
 
 // Modals
 const selectedJob = ref<Job | null>(null);
@@ -985,14 +1053,37 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .jobs-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #1a1d29;
   margin: 0;
+}
+
+.jobs-count {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .jobs-stats {
@@ -1026,6 +1117,29 @@ onUnmounted(() => {
 .stat.failed {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.view-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.view-selector {
+  border: 2px solid #e8eaed;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: white;
+  cursor: pointer;
+  font-weight: 500;
+  color: #1a1d29;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.view-selector:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* Loading, Error, Empty States */
@@ -1088,7 +1202,7 @@ onUnmounted(() => {
 .jobs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .job-card {
@@ -1238,6 +1352,11 @@ onUnmounted(() => {
   height: 12px;
 }
 
+.progress-bar.small {
+  height: 6px;
+  width: 60px;
+}
+
 .progress-fill {
   height: 100%;
   background: linear-gradient(135deg, #3b82f6, #1d4ed8);
@@ -1308,6 +1427,135 @@ onUnmounted(() => {
 .details-button:hover {
   background: #e5e7eb;
   transform: scale(1.05);
+}
+
+.details-button.small {
+  width: 24px;
+  height: 24px;
+}
+
+/* Jobs List View */
+.jobs-list {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 1fr 100px 120px 2fr 100px 60px;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.job-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 120px 2fr 100px 60px;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.job-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.job-row.pending::before {
+  background: #f59e0b;
+}
+
+.job-row.in_progress::before {
+  background: #3b82f6;
+}
+
+.job-row.completed::before {
+  background: #10b981;
+}
+
+.job-row.failed::before {
+  background: #ef4444;
+}
+
+.job-row:hover {
+  background: #f8fafc;
+}
+
+.job-row.recently-updated {
+  background: rgba(16, 185, 129, 0.05);
+  animation: glow-row 2s ease-in-out;
+}
+
+.job-row:last-child {
+  border-bottom: none;
+}
+
+.row-cell {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.job-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.job-created {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.progress-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-text {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  min-width: 30px;
+}
+
+.no-progress {
+  color: #d1d5db;
+  font-weight: 600;
+}
+
+.time-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.elapsed-time {
+  font-weight: 600;
+  color: #1a1d29;
+}
+
+.eta-time {
+  font-size: 11px;
+  color: #6b7280;
 }
 
 /* Modal Styles */
@@ -1429,6 +1677,10 @@ onUnmounted(() => {
 .payload-section {
   border-top: 1px solid #e5e7eb;
   padding-top: 20px;
+}
+
+.payload-section .detail-label {
+  margin-bottom: 12px;
 }
 
 .payload-full {
@@ -1696,6 +1948,11 @@ onUnmounted(() => {
   50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.4); }
 }
 
+@keyframes glow-row {
+  0%, 100% { background: rgba(16, 185, 129, 0.05); }
+  50% { background: rgba(16, 185, 129, 0.1); }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .job-manager {
@@ -1721,6 +1978,21 @@ onUnmounted(() => {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
+  }
+  
+  .header-right {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .jobs-list {
+    overflow-x: auto;
+  }
+  
+  .list-header, .job-row {
+    grid-template-columns: 120px 80px 100px 1fr 80px 50px;
+    min-width: 600px;
   }
   
   .modal-container {
