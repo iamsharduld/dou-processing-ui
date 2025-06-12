@@ -117,76 +117,12 @@
               <span class="stat completed" v-if="jobStats.completed">{{ jobStats.completed }} Done</span>
               <span class="stat failed" v-if="jobStats.failed">{{ jobStats.failed }} Failed</span>
             </div>
-            <div class="view-controls">
-              <select v-model="viewMode" class="view-selector">
-                <option value="grid">Grid View</option>
-                <option value="list">List View</option>
-              </select>
-            </div>
           </div>
         </div>
 
-        <!-- Grid View -->
-        <div v-if="viewMode === 'grid'" class="jobs-grid">
-          <div
-            v-for="job in userJobs"
-            :key="job.id"
-            class="job-card"
-            :class="[job.status, { 'recently-updated': isRecentlyUpdated(job) }]"
-            @click="viewJobDetails(job)"
-          >
-            <div class="card-header">
-              <div class="job-identity">
-                <span class="job-id">{{ job.id.slice(0, 8) }}</span>
-                <span class="job-status" :class="job.status">{{ formatStatus(job.status) }}</span>
-              </div>
-              <div class="job-timing">
-                <span class="time-elapsed">{{ getElapsedTime(job.created_at) }}</span>
-              </div>
-            </div>
-
-            <div v-if="job.status === 'in_progress' && job.progress" class="progress-section">
-              <div class="progress-header">
-                <span class="progress-label">Progress</span>
-                <span class="progress-percentage">{{ job.progress }}%</span>
-              </div>
-              <div class="progress-bar-container">
-                <div class="progress-bar">
-                  <div 
-                    class="progress-fill" 
-                    :style="{ width: `${job.progress}%` }"
-                  ></div>
-                </div>
-              </div>
-              <div class="progress-details">
-                <span class="eta" v-if="getETA(job)">ETA: {{ getETA(job) }}</span>
-                <span class="speed" v-if="getProgressSpeed(job)">{{ getProgressSpeed(job) }}%/min</span>
-              </div>
-            </div>
-
-            <div class="payload-preview">
-              <div class="task-info">
-                <span class="task-name">{{ getTaskName(job.payload) }}</span>
-                <span class="task-details">{{ getTaskDetails(job.payload) }}</span>
-              </div>
-            </div>
-
-            <div class="card-footer">
-              <div class="timestamps">
-                <span class="timestamp">{{ formatRelativeTime(job.updated_at) }}</span>
-              </div>
-              <div class="card-actions">
-                <button class="details-button">
-                  <span class="button-icon">👁️</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- List View -->
-        <div v-else class="jobs-list">
-          <div class="list-header">
+        <!-- Jobs Table -->
+        <div class="jobs-table">
+          <div class="table-header">
             <div class="header-cell job-col">Job</div>
             <div class="header-cell status-col">Status</div>
             <div class="header-cell progress-col">Progress</div>
@@ -212,7 +148,7 @@
             </div>
             <div class="row-cell progress-col">
               <div v-if="job.status === 'in_progress' && job.progress" class="progress-inline">
-                <div class="progress-bar small">
+                <div class="progress-bar">
                   <div class="progress-fill" :style="{ width: `${job.progress}%` }"></div>
                 </div>
                 <span class="progress-text">{{ job.progress }}%</span>
@@ -232,7 +168,7 @@
               </div>
             </div>
             <div class="row-cell actions-col">
-              <button class="details-button small">
+              <button class="details-button" @click.stop="viewJobDetails(job)">
                 <span class="button-icon">👁️</span>
               </button>
             </div>
@@ -449,7 +385,6 @@ const error = ref<string | null>(null);
 const autoRefresh = ref(true);
 const isLive = ref(false);
 const jobHistory = ref<Map<string, Job[]>>(new Map());
-const viewMode = ref<'grid' | 'list'>('grid');
 
 // Modals
 const selectedJob = ref<Job | null>(null);
@@ -1119,29 +1054,6 @@ onUnmounted(() => {
   color: #991b1b;
 }
 
-.view-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.view-selector {
-  border: 2px solid #e8eaed;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  background: white;
-  cursor: pointer;
-  font-weight: 500;
-  color: #1a1d29;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.view-selector:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
 /* Loading, Error, Empty States */
 .loading-state, .error-state, .empty-state {
   display: flex;
@@ -1198,251 +1110,15 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-/* Jobs Grid */
-.jobs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
-}
-
-.job-card {
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.job-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: transparent;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.job-card.pending::before {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.job-card.in_progress::before {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-}
-
-.job-card.completed::before {
-  background: linear-gradient(135deg, #10b981, #059669);
-}
-
-.job-card.failed::before {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-}
-
-.job-card:hover {
-  border-color: #d1d5db;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-
-.job-card.recently-updated {
-  border-color: #10b981;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-  animation: glow 2s ease-in-out;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.job-identity {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.job-id {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 600;
-  background: #f3f4f6;
-  padding: 3px 6px;
-  border-radius: 4px;
-}
-
-.job-status {
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.job-status.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.job-status.in_progress {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.job-status.completed {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.job-status.failed {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.time-elapsed {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-/* Progress Section */
-.progress-section {
-  margin-bottom: 16px;
-}
-
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.progress-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.progress-percentage {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1a1d29;
-}
-
-.progress-bar-container {
-  margin-bottom: 8px;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: #f3f4f6;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-bar.large {
-  height: 12px;
-}
-
-.progress-bar.small {
-  height: 6px;
-  width: 60px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  border-radius: 4px;
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.progress-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  color: #6b7280;
-}
-
-/* Payload Preview */
-.payload-preview {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-}
-
-.task-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.task-name {
-  font-weight: 600;
-  color: #1a1d29;
-  font-size: 13px;
-}
-
-.task-details {
-  font-size: 11px;
-  color: #6b7280;
-  line-height: 1.4;
-}
-
-/* Card Footer */
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.timestamps {
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-.details-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: #f3f4f6;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.details-button:hover {
-  background: #e5e7eb;
-  transform: scale(1.05);
-}
-
-.details-button.small {
-  width: 24px;
-  height: 24px;
-}
-
-/* Jobs List View */
-.jobs-list {
+/* Jobs Table */
+.jobs-table {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   overflow: hidden;
 }
 
-.list-header {
+.table-header {
   display: grid;
   grid-template-columns: 1fr 100px 120px 2fr 100px 60px;
   gap: 16px;
@@ -1519,15 +1195,70 @@ onUnmounted(() => {
   gap: 2px;
 }
 
+.job-id {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  color: #1a1d29;
+  font-weight: 600;
+}
+
 .job-created {
   font-size: 11px;
   color: #9ca3af;
+}
+
+.job-status {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.job-status.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.job-status.in_progress {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.job-status.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.job-status.failed {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .progress-inline {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.progress-bar {
+  width: 60px;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar.large {
+  width: 200px;
+  height: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 3px;
 }
 
 .progress-text {
@@ -1540,6 +1271,24 @@ onUnmounted(() => {
 .no-progress {
   color: #d1d5db;
   font-weight: 600;
+}
+
+.task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-name {
+  font-weight: 600;
+  color: #1a1d29;
+  font-size: 13px;
+}
+
+.task-details {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.4;
 }
 
 .time-info {
@@ -1556,6 +1305,24 @@ onUnmounted(() => {
 .eta-time {
   font-size: 11px;
   color: #6b7280;
+}
+
+.details-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.details-button:hover {
+  background: #e5e7eb;
+  transform: scale(1.05);
 }
 
 /* Modal Styles */
@@ -1671,6 +1438,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.progress-percentage {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
 }
 
 /* Payload Section */
@@ -1943,11 +1716,6 @@ onUnmounted(() => {
   50% { opacity: 0.5; }
 }
 
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
-  50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.4); }
-}
-
 @keyframes glow-row {
   0%, 100% { background: rgba(16, 185, 129, 0.05); }
   50% { background: rgba(16, 185, 129, 0.1); }
@@ -1970,10 +1738,6 @@ onUnmounted(() => {
     flex-wrap: wrap;
   }
   
-  .jobs-grid {
-    grid-template-columns: 1fr;
-  }
-  
   .jobs-header {
     flex-direction: column;
     align-items: stretch;
@@ -1986,11 +1750,11 @@ onUnmounted(() => {
     gap: 12px;
   }
   
-  .jobs-list {
+  .jobs-table {
     overflow-x: auto;
   }
   
-  .list-header, .job-row {
+  .table-header, .job-row {
     grid-template-columns: 120px 80px 100px 1fr 80px 50px;
     min-width: 600px;
   }
