@@ -59,28 +59,6 @@
         </button>
       </div>
     </form>
-
-    <div v-if="recentJobs.length" class="recent-section">
-      <div class="recent-header">
-        <h4 class="recent-title">Recently Submitted</h4>
-        <span class="recent-count">{{ recentJobs.length }} jobs</span>
-      </div>
-      <div class="recent-list">
-        <div
-          v-for="job in recentJobs"
-          :key="job.id"
-          class="recent-item"
-        >
-          <div class="job-info">
-            <span class="job-id">{{ job.id.slice(0, 8) }}...</span>
-            <span class="job-status" :class="job.status">{{ formatStatus(job.status) }}</span>
-          </div>
-          <div class="job-meta">
-            <span class="job-time">{{ formatTime(job.created_at) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -101,7 +79,6 @@ const emit = defineEmits<{
 const payloadText = ref('{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}');
 const payloadError = ref<string | null>(null);
 const loading = ref(false);
-const recentJobs = ref<Job[]>([]);
 
 const isValidJson = computed(() => {
   try {
@@ -138,12 +115,6 @@ const submitJob = async () => {
     const payload = JSON.parse(payloadText.value);
     const job = await ApiService.submitJob(props.pool.id, payload, props.userId);
     
-    // Add to recent jobs
-    recentJobs.value.unshift(job);
-    if (recentJobs.value.length > 5) {
-      recentJobs.value = recentJobs.value.slice(0, 5);
-    }
-    
     // Clear form
     payloadText.value = '{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}';
     
@@ -154,17 +125,6 @@ const submitJob = async () => {
   } finally {
     loading.value = false;
   }
-};
-
-const formatStatus = (status: string) => {
-  return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-};
-
-const formatTime = (dateString: string) => {
-  return new Date(dateString).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
 };
 </script>
 
@@ -375,105 +335,6 @@ const formatTime = (dateString: string) => {
   animation: spin 1s linear infinite;
 }
 
-.recent-section {
-  margin-top: 40px;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 32px;
-}
-
-.recent-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.recent-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1d29;
-  margin: 0;
-}
-
-.recent-count {
-  background: #f8f9fa;
-  color: #5f6368;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid #e8eaed;
-}
-
-.recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.recent-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: #fafbfc;
-  border-radius: 10px;
-  border: 1px solid #f0f0f0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.recent-item:hover {
-  background: #f8f9fa;
-  border-color: #e8eaed;
-}
-
-.job-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.job-id {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  font-size: 13px;
-  color: #5f6368;
-  font-weight: 500;
-}
-
-.job-status {
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.job-status.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.job-status.in_progress {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.job-status.completed {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.job-status.failed {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.job-time {
-  font-size: 13px;
-  color: #9aa0a6;
-  font-weight: 500;
-}
-
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -482,22 +343,6 @@ const formatTime = (dateString: string) => {
 @media (max-width: 768px) {
   .job-submission {
     padding: 24px 20px;
-  }
-  
-  .recent-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .recent-item {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-  
-  .job-info {
-    justify-content: space-between;
   }
 }
 </style>

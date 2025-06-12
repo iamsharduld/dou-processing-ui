@@ -58,20 +58,6 @@
                 </button>
               </div>
             </div>
-            <div class="card-stats" v-if="poolStats[pool.id]">
-              <div class="stat-item">
-                <span class="stat-value">{{ poolStats[pool.id].jobs.total }}</span>
-                <span class="stat-label">Jobs</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ poolStats[pool.id].workers.total_active }}</span>
-                <span class="stat-label">Workers</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ poolStats[pool.id].jobs.pending }}</span>
-                <span class="stat-label">Pending</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -98,20 +84,6 @@
               <div class="ownership-indicator viewer">
                 <span class="indicator-dot"></span>
                 <span class="indicator-text">Viewer</span>
-              </div>
-            </div>
-            <div class="card-stats" v-if="poolStats[pool.id]">
-              <div class="stat-item">
-                <span class="stat-value">{{ poolStats[pool.id].jobs.total }}</span>
-                <span class="stat-label">Jobs</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ poolStats[pool.id].workers.total_active }}</span>
-                <span class="stat-label">Workers</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ poolStats[pool.id].jobs.pending }}</span>
-                <span class="stat-label">Pending</span>
               </div>
             </div>
           </div>
@@ -191,12 +163,6 @@
               <p class="warning-message">
                 This will permanently delete the pool "<strong>{{ poolToDelete?.name }}</strong>" and all associated jobs. This action cannot be undone.
               </p>
-              <div class="pool-stats-warning" v-if="poolStats[poolToDelete?.id]">
-                <div class="stat-warning">
-                  <span class="stat-number">{{ poolStats[poolToDelete.id].jobs.total }}</span>
-                  <span class="stat-text">jobs will be deleted</span>
-                </div>
-              </div>
             </div>
           </div>
           <div v-if="deleteError" class="error-message">
@@ -223,9 +189,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { ApiService } from '../services/api';
-import type { Pool, CategorizedPools, PoolStats } from '../types';
+import type { Pool, CategorizedPools } from '../types';
 
 const props = defineProps<{
   userId: string;
@@ -239,7 +205,6 @@ const emit = defineEmits<{
 }>();
 
 const pools = ref<CategorizedPools | null>(null);
-const poolStats = ref<Record<string, PoolStats>>({});
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -260,16 +225,6 @@ const loadPools = async () => {
     loading.value = true;
     error.value = null;
     pools.value = await ApiService.getCategorizedPools(props.userId);
-    
-    // Load stats for each pool
-    const allPools = [...(pools.value.owned_pools || []), ...(pools.value.other_pools || [])];
-    for (const pool of allPools) {
-      try {
-        poolStats.value[pool.id] = await ApiService.getPoolStats(pool.id);
-      } catch (e) {
-        console.warn(`Failed to load stats for pool ${pool.id}`);
-      }
-    }
   } catch (e) {
     error.value = 'Failed to load pools. Please try again.';
     console.error('Error loading pools:', e);
@@ -602,7 +557,6 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
 }
 
 .pool-info {
@@ -679,37 +633,6 @@ onMounted(() => {
 
 .delete-icon {
   font-size: 14px;
-}
-
-.card-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 12px 8px;
-  background: #fafbfc;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-}
-
-.stat-value {
-  display: block;
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1d29;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #5f6368;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
 }
 
 /* Empty State */
@@ -981,32 +904,8 @@ onMounted(() => {
 
 .warning-message {
   color: #5f6368;
-  margin: 0 0 16px 0;
+  margin: 0;
   line-height: 1.5;
-}
-
-.pool-stats-warning {
-  display: flex;
-  gap: 16px;
-}
-
-.stat-warning {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  background: rgba(234, 67, 53, 0.1);
-  border-radius: 8px;
-}
-
-.stat-number {
-  font-weight: 700;
-  color: #ea4335;
-}
-
-.stat-text {
-  font-size: 13px;
-  color: #ea4335;
 }
 
 @keyframes spin {
@@ -1031,8 +930,8 @@ onMounted(() => {
   
   .card-header {
     flex-direction: column;
-    gap: 12px;
     align-items: stretch;
+    gap: 16px;
   }
   
   .pool-actions {
