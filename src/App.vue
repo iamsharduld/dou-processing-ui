@@ -133,6 +133,7 @@ html, body {
 }
 
 #app {
+  width: 2000px
   min-height: 100vh;
   display: flex;
   flex-direction: column;
