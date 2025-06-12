@@ -59,6 +59,12 @@
               @job-submitted="onJobSubmitted"
               :key="jobManagerKey"
             />
+
+            <!-- Worker Monitor -->
+            <WorkerMonitor
+              :pool="selectedPool"
+              :key="workerMonitorKey"
+            />
           </div>
         </div>
       </div>
@@ -70,6 +76,7 @@
 import { ref, computed } from 'vue';
 import PoolSelector from './components/PoolSelector.vue';
 import JobManager from './components/JobManager.vue';
+import WorkerMonitor from './components/WorkerMonitor.vue';
 import type { Pool, Job } from './types';
 
 // User ID - in a real app this would come from authentication
@@ -77,6 +84,7 @@ const userId = ref('test_user_1');
 const selectedPool = ref<Pool | null>(null);
 const refreshing = ref(false);
 const jobManagerKey = ref(0);
+const workerMonitorKey = ref(0);
 
 const isOwner = computed(() => {
   return selectedPool.value?.user_id === userId.value;
@@ -86,6 +94,7 @@ const onPoolSelected = (pool: Pool | null) => {
   selectedPool.value = pool;
   if (pool) {
     jobManagerKey.value++; // Force refresh of job manager
+    workerMonitorKey.value++; // Force refresh of worker monitor
   }
 };
 
@@ -107,8 +116,9 @@ const onJobSubmitted = (job: Job) => {
 const refreshData = async () => {
   refreshing.value = true;
   try {
-    // Force refresh of job manager
+    // Force refresh of both job manager and worker monitor
     jobManagerKey.value++;
+    workerMonitorKey.value++;
     await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for UX
   } finally {
     refreshing.value = false;

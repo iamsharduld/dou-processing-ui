@@ -67,6 +67,15 @@ export class ApiService {
     return response.data;
   }
 
+  static async workerHeartbeat(poolId: string, workerName: string, status: string, currentJobId?: string): Promise<Worker> {
+    const response = await api.post(`/pools/${poolId}/workers/heartbeat`, {
+      worker_name: workerName,
+      status,
+      current_job_id: currentJobId
+    });
+    return response.data;
+  }
+
   // Stats
   static async getPoolStats(poolId: string): Promise<PoolStats> {
     const response = await api.get(`/pools/${poolId}/stats`);
