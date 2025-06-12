@@ -21,6 +21,14 @@
             <span class="button-icon">📋</span>
             <span>View History</span>
           </button>
+          <button 
+            v-if="isOwner && userJobs.length > 0" 
+            @click="showClearModal = true" 
+            class="clear-button"
+          >
+            <span class="button-icon">🗑️</span>
+            <span>Clear Jobs</span>
+          </button>
           <button @click="toggleAutoRefresh" class="toggle-button" :class="{ active: autoRefresh }">
             <span class="toggle-icon">{{ autoRefresh ? '⏸️' : '▶️' }}</span>
             <span>{{ autoRefresh ? 'Pause' : 'Resume' }}</span>
@@ -261,6 +269,90 @@
         </div>
       </div>
     </div>
+
+    <!-- Clear Jobs Modal -->
+    <div v-if="showClearModal" class="modal-overlay" @click="closeClearModal">
+      <div class="modal-container" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">Clear Jobs</h3>
+          <button @click="closeClearModal" class="close-button">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="clear-options">
+            <div class="clear-warning">
+              <div class="warning-icon">⚠️</div>
+              <div class="warning-content">
+                <h4 class="warning-title">Clear jobs from this pool</h4>
+                <p class="warning-message">
+                  This action will permanently delete jobs from the pool. This cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div class="clear-filters">
+              <label class="filter-label">What to clear:</label>
+              <div class="filter-options">
+                <label class="filter-option">
+                  <input 
+                    type="radio" 
+                    v-model="clearFilter" 
+                    value="" 
+                    name="clearFilter"
+                  />
+                  <span class="option-text">All Jobs ({{ userJobs.length }})</span>
+                </label>
+                <label class="filter-option" v-if="jobStats.pending > 0">
+                  <input 
+                    type="radio" 
+                    v-model="clearFilter" 
+                    value="pending" 
+                    name="clearFilter"
+                  />
+                  <span class="option-text">Pending Jobs ({{ jobStats.pending }})</span>
+                </label>
+                <label class="filter-option" v-if="jobStats.completed > 0">
+                  <input 
+                    type="radio" 
+                    v-model="clearFilter" 
+                    value="completed" 
+                    name="clearFilter"
+                  />
+                  <span class="option-text">Completed Jobs ({{ jobStats.completed }})</span>
+                </label>
+                <label class="filter-option" v-if="jobStats.failed > 0">
+                  <input 
+                    type="radio" 
+                    v-model="clearFilter" 
+                    value="failed" 
+                    name="clearFilter"
+                  />
+                  <span class="option-text">Failed Jobs ({{ jobStats.failed }})</span>
+                </label>
+              </div>
+            </div>
+
+            <div v-if="clearError" class="error-message">
+              <span class="error-icon">⚠️</span>
+              {{ clearError }}
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" @click="closeClearModal" class="cancel-button">
+              Cancel
+            </button>
+            <button 
+              @click="clearJobs" 
+              class="clear-confirm-button" 
+              :disabled="clearing"
+            >
+              <span v-if="clearing" class="loading-spinner small"></span>
+              <span>{{ clearing ? 'Clearing...' : 'Clear Jobs' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -297,6 +389,12 @@ const showHistoryModal = ref(false);
 const historyJobs = ref<Job[]>([]);
 const historyFilter = ref<JobStatus | ''>('');
 const loadingHistory = ref(false);
+
+// Clear jobs modal
+const showClearModal = ref(false);
+const clearFilter = ref<JobStatus | ''>('');
+const clearing = ref(false);
+const clearError = ref<string | null>(null);
 
 let refreshTimer: NodeJS.Timeout | null = null;
 
@@ -402,6 +500,27 @@ const submitJob = async () => {
     payloadError.value = 'Failed to submit job. Please try again.';
   } finally {
     submitting.value = false;
+  }
+};
+
+const clearJobs = async () => {
+  try {
+    clearing.value = true;
+    clearError.value = null;
+    
+    const status = clearFilter.value as JobStatus | undefined;
+    await ApiService.clearPoolJobs(props.pool.id, props.userId, status);
+    
+    // Refresh jobs after clearing
+    await loadJobs();
+    
+    // Close modal
+    closeClearModal();
+  } catch (error) {
+    console.error('Error clearing jobs:', error);
+    clearError.value = 'Failed to clear jobs. Please try again.';
+  } finally {
+    clearing.value = false;
   }
 };
 
@@ -527,6 +646,12 @@ const closeHistoryModal = () => {
   historyFilter.value = '';
 };
 
+const closeClearModal = () => {
+  showClearModal.value = false;
+  clearFilter.value = '';
+  clearError.value = null;
+};
+
 const formatStatus = (status: string) => {
   return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
@@ -649,7 +774,7 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.history-button, .toggle-button {
+.history-button, .toggle-button, .clear-button {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -662,6 +787,17 @@ onUnmounted(() => {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 13px;
   font-weight: 600;
+}
+
+.clear-button {
+  border-color: #fecaca;
+  background: rgba(254, 202, 202, 0.1);
+  color: #dc2626;
+}
+
+.clear-button:hover {
+  border-color: #fca5a5;
+  background: rgba(254, 202, 202, 0.2);
 }
 
 .toggle-button.active {
@@ -816,6 +952,13 @@ onUnmounted(() => {
   animation: spin 1s linear infinite;
 }
 
+.loading-spinner.small {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  margin: 0;
+}
+
 .error-message {
   display: flex;
   align-items: center;
@@ -827,6 +970,10 @@ onUnmounted(() => {
   background: #fef7f7;
   border-radius: 8px;
   border: 1px solid #fce8e6;
+}
+
+.error-icon {
+  font-size: 16px;
 }
 
 /* Jobs Section */
@@ -1397,6 +1544,142 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* Clear Jobs Modal */
+.clear-options {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.clear-warning {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: #fef7f7;
+  border: 1px solid #fce8e6;
+  border-radius: 12px;
+}
+
+.warning-icon {
+  font-size: 24px;
+  color: #ea4335;
+  flex-shrink: 0;
+}
+
+.warning-content {
+  flex: 1;
+}
+
+.warning-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1d29;
+  margin: 0 0 8px 0;
+}
+
+.warning-message {
+  color: #5f6368;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.clear-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1d29;
+}
+
+.filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-option:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.filter-option input[type="radio"] {
+  margin: 0;
+}
+
+.option-text {
+  font-size: 14px;
+  color: #1a1d29;
+  font-weight: 500;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.cancel-button {
+  background: #f8f9fa;
+  color: #5f6368;
+  border: 2px solid #e8eaed;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cancel-button:hover {
+  background: #f1f3f4;
+  border-color: #dadce0;
+}
+
+.clear-confirm-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ea4335, #d33b2c);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 120px;
+  justify-content: center;
+}
+
+.clear-confirm-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 67, 53, 0.4);
+}
+
+.clear-confirm-button:disabled {
+  background: #9aa0a6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Animations */
 @keyframes spin {
   0% { transform: rotate(0deg); }
@@ -1427,6 +1710,7 @@ onUnmounted(() => {
   
   .controls-section {
     justify-content: space-between;
+    flex-wrap: wrap;
   }
   
   .jobs-grid {
@@ -1451,6 +1735,15 @@ onUnmounted(() => {
   .history-filters {
     flex-direction: column;
     align-items: stretch;
+  }
+  
+  .clear-warning {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
   }
 }
 </style>

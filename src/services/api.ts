@@ -53,6 +53,14 @@ export class ApiService {
     return response.data;
   }
 
+  static async clearPoolJobs(poolId: string, userId: string, status?: JobStatus): Promise<void> {
+    const params = new URLSearchParams({ user_id: userId });
+    if (status) {
+      params.append('status', status);
+    }
+    await api.delete(`/pools/${poolId}/jobs?${params.toString()}`);
+  }
+
   // Worker operations
   static async getPoolWorkers(poolId: string): Promise<Worker[]> {
     const response = await api.get(`/pools/${poolId}/workers`);
