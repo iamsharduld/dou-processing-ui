@@ -29,7 +29,7 @@
           @pool-deleted="onPoolDeleted"
         />
 
-        <!-- Pool Management Section -->
+        <!-- Job Management Section -->
         <div v-if="selectedPool" class="pool-workspace">
           <div class="workspace-header">
             <div class="pool-info">
@@ -52,33 +52,13 @@
           </div>
 
           <div class="workspace-content">
-            <!-- Job Submission (only for owned pools) -->
-            <div v-if="isOwner" class="workspace-section">
-              <JobSubmission
-                :pool="selectedPool"
-                :user-id="userId"
-                @job-submitted="onJobSubmitted"
-              />
-            </div>
-
-            <!-- Two Column Layout for Progress and Jobs -->
-            <div class="dual-column-layout">
-              <!-- Live Progress Grid -->
-              <div class="column-left">
-                <ProgressGrid
-                  :pool="selectedPool"
-                  :key="progressGridKey"
-                />
-              </div>
-
-              <!-- Job List -->
-              <div class="column-right">
-                <JobList
-                  :pool="selectedPool"
-                  :key="jobListKey"
-                />
-              </div>
-            </div>
+            <!-- Unified Job Management -->
+            <JobManager
+              :pool="selectedPool"
+              :user-id="userId"
+              @job-submitted="onJobSubmitted"
+              :key="jobManagerKey"
+            />
           </div>
         </div>
       </div>
@@ -89,17 +69,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import PoolSelector from './components/PoolSelector.vue';
-import JobSubmission from './components/JobSubmission.vue';
-import JobList from './components/JobList.vue';
-import ProgressGrid from './components/ProgressGrid.vue';
+import JobManager from './components/JobManager.vue';
 import type { Pool, Job } from './types';
 
 // User ID - in a real app this would come from authentication
 const userId = ref('user-123');
 const selectedPool = ref<Pool | null>(null);
 const refreshing = ref(false);
-const jobListKey = ref(0);
-const progressGridKey = ref(0);
+const jobManagerKey = ref(0);
 
 const isOwner = computed(() => {
   return selectedPool.value?.user_id === userId.value;
@@ -108,8 +85,7 @@ const isOwner = computed(() => {
 const onPoolSelected = (pool: Pool | null) => {
   selectedPool.value = pool;
   if (pool) {
-    jobListKey.value++; // Force refresh of job list
-    progressGridKey.value++; // Force refresh of progress grid
+    jobManagerKey.value++; // Force refresh of job manager
   }
 };
 
@@ -124,17 +100,15 @@ const onPoolDeleted = (poolId: string) => {
 };
 
 const onJobSubmitted = (job: Job) => {
-  // Refresh both job list and progress grid when a new job is submitted
-  jobListKey.value++;
-  progressGridKey.value++;
+  // Job submission is handled in JobManager
+  console.log('Job submitted:', job.id);
 };
 
 const refreshData = async () => {
   refreshing.value = true;
   try {
-    // Force refresh of both components
-    jobListKey.value++;
-    progressGridKey.value++;
+    // Force refresh of job manager
+    jobManagerKey.value++;
     await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for UX
   } finally {
     refreshing.value = false;
@@ -371,36 +345,12 @@ html, body {
   gap: 32px;
 }
 
-.workspace-section {
-  /* Sections will have their own styling */
-}
-
-/* Dual Column Layout */
-.dual-column-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
-  align-items: start;
-}
-
-.column-left,
-.column-right {
-  min-width: 0; /* Prevents grid overflow */
-}
-
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
-  .dual-column-layout {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-}
-
 @media (max-width: 768px) {
   .content-wrapper {
     padding: 20px;
@@ -422,10 +372,6 @@ html, body {
   
   .workspace-actions {
     justify-content: flex-end;
-  }
-  
-  .dual-column-layout {
-    grid-template-columns: 1fr;
   }
 }
 
