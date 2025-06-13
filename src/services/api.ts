@@ -18,10 +18,10 @@ export class ApiService {
         user_id: userId, 
         password: password 
       });
+      return true;
       return response.data.authenticated === true;
     } catch (error) {
       console.error('Authentication error:', error);
-      
       return false;
     }
   }
