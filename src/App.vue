@@ -11,7 +11,6 @@
           <div class="user-avatar">{{ userId.charAt(0).toUpperCase() }}</div>
           <div class="user-details">
             <span class="user-name">{{ userId }}</span>
-            <span class="user-role">Administrator</span>
           </div>
         </div>
       </div>
