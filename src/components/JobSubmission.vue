@@ -9,6 +9,44 @@
 
     <form @submit.prevent="submitJob" class="submission-form">
       <div class="form-section">
+        <label for="outputPath" class="form-label">Output Folder Path</label>
+        <div class="input-container">
+          <input
+            id="outputPath"
+            v-model="outputPath"
+            type="text"
+            class="path-input"
+            :class="{ 'has-error': outputPathError }"
+            placeholder="e.g., /home/user/output or C:\Users\username\Documents\output"
+            required
+          />
+          <div class="input-footer">
+            <div class="validation-status">
+              <span v-if="isValidPath && outputPath.trim()" class="status-indicator valid">
+                <span class="status-dot"></span>
+                Valid path format
+              </span>
+              <span v-else-if="outputPath.trim()" class="status-indicator invalid">
+                <span class="status-dot"></span>
+                Invalid path format
+              </span>
+              <span v-else class="status-indicator empty">
+                <span class="status-dot"></span>
+                Enter output folder path
+              </span>
+            </div>
+          </div>
+        </div>
+        <div v-if="outputPathError" class="error-message">
+          <span class="error-icon">⚠️</span>
+          {{ outputPathError }}
+        </div>
+        <div class="help-text">
+          Specify the full path where job output files should be saved
+        </div>
+      </div>
+
+      <div class="form-section">
         <label for="payload" class="form-label">Job Payload</label>
         <div class="textarea-container">
           <textarea
@@ -52,7 +90,7 @@
         <button
           type="submit"
           class="submit-button"
-          :disabled="loading || !payloadText.trim() || !isValidJson"
+          :disabled="loading || !payloadText.trim() || !isValidJson || !outputPath.trim() || !isValidPath"
         >
           <span v-if="loading" class="loading-spinner"></span>
           <span class="button-text">{{ loading ? 'Submitting...' : 'Submit Job' }}</span>
@@ -76,6 +114,8 @@ const emit = defineEmits<{
   'job-submitted': [job: Job];
 }>();
 
+const outputPath = ref('');
+const outputPathError = ref<string | null>(null);
 const payloadText = ref('{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}');
 const payloadError = ref<string | null>(null);
 const loading = ref(false);
@@ -88,6 +128,35 @@ const isValidJson = computed(() => {
     return false;
   }
 });
+
+const isValidPath = computed(() => {
+  const path = outputPath.value.trim();
+  if (!path) return false;
+  
+  // Basic path validation - check for common path patterns
+  // Unix/Linux paths: start with / or ~
+  // Windows paths: start with drive letter (C:) or UNC (\\)
+  const unixPattern = /^(\/|~)/;
+  const windowsPattern = /^([A-Za-z]:|\\\\)/;
+  
+  return unixPattern.test(path) || windowsPattern.test(path);
+});
+
+const validateOutputPath = () => {
+  outputPathError.value = null;
+  
+  if (!outputPath.value.trim()) {
+    outputPathError.value = 'Output folder path is required';
+    return false;
+  }
+  
+  if (!isValidPath.value) {
+    outputPathError.value = 'Please enter a valid folder path (e.g., /home/user/output or C:\\Users\\username\\Documents\\output)';
+    return false;
+  }
+  
+  return true;
+};
 
 const validatePayload = () => {
   payloadError.value = null;
@@ -107,15 +176,23 @@ const validatePayload = () => {
 };
 
 const submitJob = async () => {
-  if (!validatePayload()) return;
+  if (!validateOutputPath() || !validatePayload()) return;
   
   try {
     loading.value = true;
     
     const payload = JSON.parse(payloadText.value);
-    const job = await ApiService.submitJob(props.pool.id, payload, props.userId);
+    
+    // Add output path to the payload
+    const jobPayload = {
+      ...payload,
+      output_path: outputPath.value.trim()
+    };
+    
+    const job = await ApiService.submitJob(props.pool.id, jobPayload, props.userId);
     
     // Clear form
+    outputPath.value = '';
     payloadText.value = '{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}';
     
     emit('job-submitted', job);
@@ -165,6 +242,53 @@ const submitJob = async () => {
   font-weight: 600;
   color: #1a1d29;
   margin-bottom: 12px;
+}
+
+.input-container {
+  position: relative;
+  border: 2px solid #e8eaed;
+  border-radius: 12px;
+  background: #fafbfc;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.input-container:focus-within {
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.input-container:has(.has-error) {
+  border-color: #ea4335;
+  background: #fef7f7;
+}
+
+.path-input {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 14px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  line-height: 1.6;
+  background: transparent;
+  color: #1a1d29;
+}
+
+.path-input:focus {
+  outline: none;
+}
+
+.path-input::placeholder {
+  color: #9aa0a6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.input-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+  background: rgba(250, 251, 252, 0.8);
+  border-radius: 0 0 10px 10px;
 }
 
 .textarea-container {
