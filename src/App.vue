@@ -52,18 +52,18 @@
           </div>
 
           <div class="workspace-content">
+            <!-- Worker Monitor -->
+            <WorkerMonitor
+              :pool="selectedPool"
+              :key="workerMonitorKey"
+            />
+
             <!-- Unified Job Management -->
             <JobManager
               :pool="selectedPool"
               :user-id="userId"
               @job-submitted="onJobSubmitted"
               :key="jobManagerKey"
-            />
-
-            <!-- Worker Monitor -->
-            <WorkerMonitor
-              :pool="selectedPool"
-              :key="workerMonitorKey"
             />
           </div>
         </div>
@@ -143,7 +143,7 @@ html, body {
 }
 
 #app {
-  width: 2000px;
+  width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
