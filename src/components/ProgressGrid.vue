@@ -20,10 +20,6 @@
           <div class="refresh-info">
             <span class="refresh-text">Updates every {{ refreshInterval / 1000 }}s</span>
           </div>
-          <button @click="toggleAutoRefresh" class="toggle-button" :class="{ active: autoRefresh }">
-            <span class="toggle-icon">{{ autoRefresh ? '⏸️' : '▶️' }}</span>
-            <span>{{ autoRefresh ? 'Pause' : 'Resume' }}</span>
-          </button>
         </div>
       </div>
     </div>

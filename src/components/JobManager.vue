@@ -17,10 +17,6 @@
         </div>
         
         <div class="controls-section">
-          <button @click="showHistoryModal = true" class="history-button">
-            <span class="button-icon">📋</span>
-            <span>View History</span>
-          </button>
           <button 
             v-if="isOwner && userJobs.length > 0" 
             @click="showClearModal = true" 
@@ -28,10 +24,6 @@
           >
             <span class="button-icon">🗑️</span>
             <span>Clear Jobs</span>
-          </button>
-          <button @click="toggleAutoRefresh" class="toggle-button" :class="{ active: autoRefresh }">
-            <span class="toggle-icon">{{ autoRefresh ? '⏸️' : '▶️' }}</span>
-            <span>{{ autoRefresh ? 'Pause' : 'Resume' }}</span>
           </button>
         </div>
       </div>
