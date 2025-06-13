@@ -31,24 +31,20 @@
 
         <!-- Job Management Section -->
         <div v-if="selectedPool" class="pool-workspace">
+          <!-- Compact Workspace Header -->
           <div class="workspace-header">
             <div class="pool-info">
-              <div class="pool-title-section">
-                <h2 class="pool-title">{{ selectedPool.name }}</h2>
-                <div class="pool-badges">
-                  <span class="pool-id-badge">{{ selectedPool.id.slice(0, 8) }}</span>
-                  <span class="ownership-badge" :class="{ owner: isOwner, viewer: !isOwner }">
-                    {{ isOwner ? 'Owner' : 'Viewer' }}
-                  </span>
-                </div>
+              <h2 class="pool-title">{{ selectedPool.name }}</h2>
+              <div class="pool-meta">
+                <span class="pool-id">{{ selectedPool.id.slice(0, 8) }}</span>
+                <span class="ownership-badge" :class="{ owner: isOwner, viewer: !isOwner }">
+                  {{ isOwner ? 'Owner' : 'Viewer' }}
+                </span>
               </div>
             </div>
-            <div class="workspace-actions">
-              <button @click="refreshData" class="action-button" :disabled="refreshing">
-                <span class="action-icon" :class="{ spinning: refreshing }">↻</span>
-                <span>Refresh</span>
-              </button>
-            </div>
+            <button @click="refreshData" class="refresh-button" :disabled="refreshing">
+              <span class="refresh-icon" :class="{ spinning: refreshing }">↻</span>
+            </button>
           </div>
 
           <div class="workspace-content">
@@ -249,53 +245,54 @@ html, body {
   margin-top: 8px;
 }
 
+/* Compact Workspace Header */
 .workspace-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 32px;
+  align-items: center;
+  margin-bottom: 24px;
   background: white;
-  padding: 32px;
-  border-radius: 16px;
+  padding: 16px 24px;
+  border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #e8eaed;
 }
 
-.pool-title-section {
+.pool-info {
   flex: 1;
 }
 
 .pool-title {
-  font-size: 32px;
+  font-size: 20px;
   font-weight: 700;
   color: #1a1d29;
-  margin: 0 0 12px 0;
-  letter-spacing: -0.5px;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.3px;
 }
 
-.pool-badges {
+.pool-meta {
   display: flex;
   gap: 12px;
   align-items: center;
 }
 
-.pool-id-badge {
+.pool-id {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  font-size: 13px;
+  font-size: 12px;
   color: #5f6368;
   background: #f8f9fa;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
   border: 1px solid #e8eaed;
 }
 
 .ownership-badge {
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .ownership-badge.owner {
@@ -309,19 +306,13 @@ html, body {
   border: 1px solid #e8eaed;
 }
 
-.workspace-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.action-button {
+.refresh-button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid #e8eaed;
@@ -329,31 +320,31 @@ html, body {
   color: #5f6368;
 }
 
-.action-button:hover:not(:disabled) {
+.refresh-button:hover:not(:disabled) {
   background: #f8f9fa;
   border-color: #dadce0;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.action-button:disabled {
+.refresh-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.action-icon {
+.refresh-icon {
   font-size: 16px;
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.action-icon.spinning {
+.refresh-icon.spinning {
   animation: spin 1s linear infinite;
 }
 
 .workspace-content {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 @keyframes spin {
@@ -376,13 +367,13 @@ html, body {
   
   .workspace-header {
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
     align-items: stretch;
-    padding: 24px;
+    padding: 16px 20px;
   }
   
-  .workspace-actions {
-    justify-content: flex-end;
+  .pool-meta {
+    justify-content: space-between;
   }
 }
 
@@ -400,7 +391,11 @@ html, body {
   }
   
   .pool-title {
-    font-size: 24px;
+    font-size: 18px;
+  }
+  
+  .workspace-header {
+    padding: 12px 16px;
   }
 }
 </style>
