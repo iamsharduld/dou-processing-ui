@@ -5,7 +5,7 @@
       <div class="navbar-container">
         <div class="navbar-brand">
           <div class="brand-icon">⚡</div>
-          <h1 class="brand-title">WorkerPool</h1>
+          <h1 class="brand-title">DoU Processing</h1>
         </div>
         <div class="navbar-user">
           <div class="user-avatar">{{ userId.charAt(0).toUpperCase() }}</div>
