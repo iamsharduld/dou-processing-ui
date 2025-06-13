@@ -11,6 +11,20 @@ const api = axios.create({
 });
 
 export class ApiService {
+  // Authentication
+  static async authenticate(userId: string, password: string): Promise<boolean> {
+    try {
+      const response = await api.post('/auth/login', { 
+        user_id: userId, 
+        password: password 
+      });
+      return response.data.authenticated === true;
+    } catch (error) {
+      console.error('Authentication error:', error);
+      return false;
+    }
+  }
+
   // Pool operations
   static async getCategorizedPools(userId: string): Promise<CategorizedPools> {
     const response = await api.get(`/pools/categorized?user_id=${userId}`);

@@ -1,81 +1,98 @@
 <template>
   <div id="app">
-    <!-- Top Navigation Bar -->
-    <nav class="top-navbar">
-      <div class="navbar-container">
-        <div class="navbar-brand">
-          <div class="brand-icon">⚡</div>
-          <h1 class="brand-title">DoU Processing</h1>
-        </div>
-        <div class="navbar-user">
-          <div class="user-avatar">{{ userId.charAt(0).toUpperCase() }}</div>
-          <div class="user-details">
-            <span class="user-name">{{ userId }}</span>
+    <!-- Login Screen -->
+    <LoginForm 
+      v-if="!isAuthenticated" 
+      @login-success="handleLoginSuccess"
+    />
+
+    <!-- Main Application -->
+    <div v-else>
+      <!-- Top Navigation Bar -->
+      <nav class="top-navbar">
+        <div class="navbar-container">
+          <div class="navbar-brand">
+            <div class="brand-icon">⚡</div>
+            <h1 class="brand-title">DoU Processing</h1>
           </div>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Main Content Area -->
-    <main class="main-container">
-      <div class="content-wrapper">
-        <!-- Pool Selection -->
-        <PoolSelector
-          :user-id="userId"
-          :selected-pool="selectedPool"
-          @pool-selected="onPoolSelected"
-          @pool-created="onPoolCreated"
-          @pool-deleted="onPoolDeleted"
-        />
-
-        <!-- Job Management Section -->
-        <div v-if="selectedPool" class="pool-workspace">
-          <!-- Compact Workspace Header -->
-          <div class="workspace-header">
-            <div class="pool-info">
-              <h2 class="pool-title">{{ selectedPool.name }}</h2>
-              <div class="pool-meta">
-                <span class="pool-id">{{ selectedPool.id.slice(0, 8) }}</span>
-                <span class="ownership-badge" :class="{ owner: isOwner, viewer: !isOwner }">
-                  {{ isOwner ? 'Owner' : 'Viewer' }}
-                </span>
-              </div>
+          <div class="navbar-user">
+            <div class="user-avatar">{{ userId.charAt(0).toUpperCase() }}</div>
+            <div class="user-details">
+              <span class="user-name">{{ userId }}</span>
             </div>
-            <button @click="refreshData" class="refresh-button" :disabled="refreshing">
-              <span class="refresh-icon" :class="{ spinning: refreshing }">↻</span>
+            <button @click="handleLogout" class="logout-button">
+              <span class="logout-icon">🚪</span>
+              <span>Logout</span>
             </button>
           </div>
+        </div>
+      </nav>
 
-          <div class="workspace-content">
-            <!-- Worker Monitor -->
-            <WorkerMonitor
-              :pool="selectedPool"
-              :key="workerMonitorKey"
-            />
+      <!-- Main Content Area -->
+      <main class="main-container">
+        <div class="content-wrapper">
+          <!-- Pool Selection -->
+          <PoolSelector
+            :user-id="userId"
+            :selected-pool="selectedPool"
+            @pool-selected="onPoolSelected"
+            @pool-created="onPoolCreated"
+            @pool-deleted="onPoolDeleted"
+          />
 
-            <!-- Unified Job Management -->
-            <JobManager
-              :pool="selectedPool"
-              :user-id="userId"
-              @job-submitted="onJobSubmitted"
-              :key="jobManagerKey"
-            />
+          <!-- Job Management Section -->
+          <div v-if="selectedPool" class="pool-workspace">
+            <!-- Compact Workspace Header -->
+            <div class="workspace-header">
+              <div class="pool-info">
+                <h2 class="pool-title">{{ selectedPool.name }}</h2>
+                <div class="pool-meta">
+                  <span class="pool-id">{{ selectedPool.id.slice(0, 8) }}</span>
+                  <span class="ownership-badge" :class="{ owner: isOwner, viewer: !isOwner }">
+                    {{ isOwner ? 'Owner' : 'Viewer' }}
+                  </span>
+                </div>
+              </div>
+              <button @click="refreshData" class="refresh-button" :disabled="refreshing">
+                <span class="refresh-icon" :class="{ spinning: refreshing }">↻</span>
+              </button>
+            </div>
+
+            <div class="workspace-content">
+              <!-- Worker Monitor -->
+              <WorkerMonitor
+                :pool="selectedPool"
+                :key="workerMonitorKey"
+              />
+
+              <!-- Unified Job Management -->
+              <JobManager
+                :pool="selectedPool"
+                :user-id="userId"
+                @job-submitted="onJobSubmitted"
+                :key="jobManagerKey"
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import LoginForm from './components/LoginForm.vue';
 import PoolSelector from './components/PoolSelector.vue';
 import JobManager from './components/JobManager.vue';
 import WorkerMonitor from './components/WorkerMonitor.vue';
 import type { Pool, Job } from './types';
 
-// User ID - in a real app this would come from authentication
-const userId = ref('test_user_1');
+// Authentication state
+const isAuthenticated = ref(false);
+const userId = ref('');
+
+// Application state
 const selectedPool = ref<Pool | null>(null);
 const refreshing = ref(false);
 const jobManagerKey = ref(0);
@@ -84,6 +101,19 @@ const workerMonitorKey = ref(0);
 const isOwner = computed(() => {
   return selectedPool.value?.user_id === userId.value;
 });
+
+const handleLoginSuccess = (authenticatedUserId: string) => {
+  userId.value = authenticatedUserId;
+  isAuthenticated.value = true;
+};
+
+const handleLogout = () => {
+  isAuthenticated.value = false;
+  userId.value = '';
+  selectedPool.value = null;
+  jobManagerKey.value = 0;
+  workerMonitorKey.value = 0;
+};
 
 const onPoolSelected = (pool: Pool | null) => {
   selectedPool.value = pool;
@@ -222,8 +252,29 @@ html, body {
   font-weight: 600;
 }
 
-.user-role {
-  color: rgba(255, 255, 255, 0.8);
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.logout-icon {
   font-size: 12px;
 }
 
