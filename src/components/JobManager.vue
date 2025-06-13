@@ -536,7 +536,7 @@ const isOwner = computed(() => {
 const userJobs = computed(() => {
   // For now, show all jobs since we don't have user_id in job data
   // In a real implementation, you'd filter by user_id
-  return jobs.value.slice(0, 20); // Limit to recent 20 jobs
+  return jobs.value; // Limit to recent 20 jobs
 });
 
 const jobStats = computed(() => {
