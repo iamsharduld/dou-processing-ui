@@ -29,165 +29,55 @@
             <span class="button-icon">🗑️</span>
             <span>Clear Jobs</span>
           </button>
-          <button @click="toggleAutoRefresh" class="toggle-button" :class="{ active: autoRefresh }">
-            <span class="toggle-icon">{{ autoRefresh ? '⏸️' : '▶️' }}</span>
-            <span>{{ autoRefresh ? 'Pause' : 'Resume' }}</span>
-          </button>
         </div>
       </div>
     </div>
 
-    <!-- Excel File Upload Section (only for owned pools) -->
+    <!-- Job Submission Form (only for owned pools) -->
     <div v-if="isOwner" class="submission-section">
-      <div class="submission-header">
-        <h4 class="submission-title">Submit Jobs from Excel</h4>
-        <p class="submission-subtitle">Upload an Excel file with columns: upd_id, trace_file_path, modification_file</p>
-      </div>
-
-      <!-- File Upload Area -->
-      <div 
-        class="file-upload-area"
-        :class="{ 
-          'drag-over': isDragOver,
-          'has-file': selectedFile,
-          'has-error': uploadError
-        }"
-        @drop="handleFileDrop"
-        @dragover.prevent="isDragOver = true"
-        @dragleave="isDragOver = false"
-        @click="triggerFileInput"
-      >
-        <input
-          ref="fileInput"
-          type="file"
-          accept=".xlsx,.xls"
-          @change="handleFileSelect"
-          style="display: none"
-        />
-        
-        <div v-if="!selectedFile" class="upload-prompt">
-          <div class="upload-icon">📊</div>
-          <div class="upload-text">
-            <p class="upload-title">Drop Excel file here or click to browse</p>
-            <p class="upload-subtitle">Supports .xlsx and .xls files</p>
-          </div>
-        </div>
-
-        <div v-else class="file-info">
-          <div class="file-icon">📄</div>
-          <div class="file-details">
-            <p class="file-name">{{ selectedFile.name }}</p>
-            <p class="file-size">{{ formatFileSize(selectedFile.size) }}</p>
-          </div>
-          <button @click.stop="clearFile" class="remove-file-button">
-            <span class="remove-icon">×</span>
-          </button>
-        </div>
-      </div>
-
-      <div v-if="uploadError" class="error-message">
-        <span class="error-icon">⚠️</span>
-        {{ uploadError }}
-      </div>
-
-      <!-- Process File Button -->
-      <div v-if="selectedFile && !jobsPreview.length" class="file-actions">
-        <button 
-          @click="processExcelFile" 
-          class="process-button"
-          :disabled="processing"
-        >
-          <span v-if="processing" class="loading-spinner"></span>
-          <span>{{ processing ? 'Processing...' : 'Process File' }}</span>
-        </button>
-      </div>
-
-      <!-- Jobs Preview Table -->
-      <div v-if="jobsPreview.length" class="jobs-preview">
-        <div class="preview-header">
-          <h5 class="preview-title">Jobs Preview ({{ jobsPreview.length }} jobs)</h5>
-          <div class="preview-actions">
-            <button @click="clearPreview" class="clear-preview-button">
-              <span class="button-icon">🗑️</span>
-              <span>Clear</span>
-            </button>
-            <button 
-              @click="submitAllJobs" 
-              class="submit-all-button"
-              :disabled="submittingBatch || jobsPreview.every(job => job.status === 'submitted')"
-            >
-              <span v-if="submittingBatch" class="loading-spinner"></span>
-              <span v-if="submittingBatch">
-                Submitting... {{ submissionProgress.current }}/{{ submissionProgress.total }}
-              </span>
-              <span v-else-if="jobsPreview.every(job => job.status === 'submitted')">
-                All Jobs Submitted
-              </span>
-              <span v-else>
-                Submit All Jobs
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div class="preview-table-container">
-          <table class="preview-table">
-            <thead>
-              <tr>
-                <th class="row-number">#</th>
-                <th class="upd-id">UPD ID</th>
-                <th class="trace-file">Trace File</th>
-                <th class="modification-file">Modification File</th>
-                <th class="status">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr 
-                v-for="(job, index) in jobsPreview" 
-                :key="index"
-                class="preview-row"
-                :class="job.status"
+      <form @submit.prevent="submitJob" class="submission-form">
+        <div class="form-section">
+          <label for="payload" class="form-label">Submit New Job</label>
+          <div class="textarea-container">
+            <textarea
+              id="payload"
+              v-model="payloadText"
+              class="payload-textarea"
+              :class="{ 'has-error': payloadError }"
+              placeholder='{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}'
+              rows="6"
+            ></textarea>
+            <div class="textarea-footer">
+              <div class="validation-status">
+                <span v-if="isValidJson && payloadText.trim()" class="status-indicator valid">
+                  <span class="status-dot"></span>
+                  Valid JSON
+                </span>
+                <span v-else-if="payloadText.trim()" class="status-indicator invalid">
+                  <span class="status-dot"></span>
+                  Invalid JSON
+                </span>
+                <span v-else class="status-indicator empty">
+                  <span class="status-dot"></span>
+                  Enter JSON payload
+                </span>
+              </div>
+              <button
+                type="submit"
+                class="submit-button"
+                :disabled="submitting || !payloadText.trim() || !isValidJson"
               >
-                <td class="row-number">{{ index + 1 }}</td>
-                <td class="upd-id">{{ job.payload.upd_id }}</td>
-                <td class="trace-file">
-                  <span class="file-path" :title="job.payload.trace_file_path">
-                    {{ getFileName(job.payload.trace_file_path) }}
-                  </span>
-                </td>
-                <td class="modification-file">
-                  <span class="file-path" :title="job.payload.modification_file">
-                    {{ getFileName(job.payload.modification_file) }}
-                  </span>
-                </td>
-                <td class="status">
-                  <span class="status-badge" :class="job.status">
-                    <span v-if="job.status === 'submitting'" class="status-spinner"></span>
-                    {{ formatJobStatus(job.status) }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div v-if="submissionSummary" class="submission-summary">
-          <div class="summary-stats">
-            <div class="summary-stat success">
-              <span class="stat-value">{{ submissionSummary.successful }}</span>
-              <span class="stat-label">Successful</span>
-            </div>
-            <div class="summary-stat failed">
-              <span class="stat-value">{{ submissionSummary.failed }}</span>
-              <span class="stat-label">Failed</span>
-            </div>
-            <div class="summary-stat total">
-              <span class="stat-value">{{ submissionSummary.total }}</span>
-              <span class="stat-label">Total</span>
+                <span v-if="submitting" class="loading-spinner"></span>
+                <span class="button-text">{{ submitting ? 'Submitting...' : 'Submit Job' }}</span>
+              </button>
             </div>
           </div>
+          <div v-if="payloadError" class="error-message">
+            <span class="error-icon">⚠️</span>
+            {{ payloadError }}
+          </div>
         </div>
-      </div>
+      </form>
     </div>
 
     <!-- Jobs List -->
@@ -206,7 +96,7 @@
       <div v-else-if="!userJobs.length" class="empty-state">
         <div class="empty-icon">📝</div>
         <h4 class="empty-title">No jobs submitted</h4>
-        <p class="empty-message" v-if="isOwner">Upload an Excel file to submit your first jobs.</p>
+        <p class="empty-message" v-if="isOwner">Submit your first job to get started.</p>
         <p class="empty-message" v-else>No jobs have been submitted by you in this pool.</p>
       </div>
 
@@ -221,67 +111,61 @@
           </div>
         </div>
 
-        <!-- Jobs Table -->
-        <div class="jobs-table-container">
-          <table class="jobs-table">
-            <thead>
-              <tr>
-                <th class="job-id">Job ID</th>
-                <th class="task-name">Task</th>
-                <th class="status">Status</th>
-                <th class="progress">Progress</th>
-                <th class="created">Created</th>
-                <th class="updated">Updated</th>
-                <th class="actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr 
-                v-for="job in userJobs" 
-                :key="job.id"
-                class="job-row"
-                :class="[job.status, { 'recently-updated': isRecentlyUpdated(job) }]"
-              >
-                <td class="job-id">
-                  <span class="id-text">{{ job.id.slice(0, 8) }}</span>
-                </td>
-                <td class="task-name">
-                  <div class="task-info">
-                    <span class="task-title">{{ getTaskName(job.payload) }}</span>
-                    <span class="task-subtitle">{{ getTaskDetails(job.payload) }}</span>
-                  </div>
-                </td>
-                <td class="status">
-                  <span class="status-badge" :class="job.status">
-                    {{ formatStatus(job.status) }}
-                  </span>
-                </td>
-                <td class="progress">
-                  <div v-if="job.status === 'in_progress' && job.progress" class="progress-cell">
-                    <div class="progress-bar-small">
-                      <div 
-                        class="progress-fill-small" 
-                        :style="{ width: `${job.progress}%` }"
-                      ></div>
-                    </div>
-                    <span class="progress-text">{{ job.progress }}%</span>
-                  </div>
-                  <span v-else class="no-progress">-</span>
-                </td>
-                <td class="created">
-                  <span class="time-text">{{ formatRelativeTime(job.created_at) }}</span>
-                </td>
-                <td class="updated">
-                  <span class="time-text">{{ formatRelativeTime(job.updated_at) }}</span>
-                </td>
-                <td class="actions">
-                  <button @click="viewJobDetails(job)" class="action-button">
-                    <span class="action-icon">👁️</span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="jobs-grid">
+          <div
+            v-for="job in userJobs"
+            :key="job.id"
+            class="job-card"
+            :class="[job.status, { 'recently-updated': isRecentlyUpdated(job) }]"
+            @click="viewJobDetails(job)"
+          >
+            <div class="card-header">
+              <div class="job-identity">
+                <span class="job-id">{{ job.id.slice(0, 8) }}</span>
+                <span class="job-status" :class="job.status">{{ formatStatus(job.status) }}</span>
+              </div>
+              <div class="job-timing">
+                <span class="time-elapsed">{{ getElapsedTime(job.created_at) }}</span>
+              </div>
+            </div>
+
+            <div v-if="job.status === 'in_progress' && job.progress" class="progress-section">
+              <div class="progress-header">
+                <span class="progress-label">Progress</span>
+                <span class="progress-percentage">{{ job.progress }}%</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar">
+                  <div 
+                    class="progress-fill" 
+                    :style="{ width: `${job.progress}%` }"
+                  ></div>
+                </div>
+              </div>
+              <div class="progress-details">
+                <span class="eta" v-if="getETA(job)">ETA: {{ getETA(job) }}</span>
+                <span class="speed" v-if="getProgressSpeed(job)">{{ getProgressSpeed(job) }}%/min</span>
+              </div>
+            </div>
+
+            <div class="payload-preview">
+              <div class="task-info">
+                <span class="task-name">{{ getTaskName(job.payload) }}</span>
+                <span class="task-details">{{ getTaskDetails(job.payload) }}</span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <div class="timestamps">
+                <span class="timestamp">{{ formatRelativeTime(job.updated_at) }}</span>
+              </div>
+              <div class="card-actions">
+                <button class="details-button">
+                  <span class="button-icon">👁️</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -472,7 +356,6 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { ApiService } from '../services/api';
 import type { Pool, Job, JobStatus } from '../types';
-import * as XLSX from 'xlsx';
 
 const props = defineProps<{
   pool: Pool;
@@ -483,34 +366,15 @@ const emit = defineEmits<{
   'job-submitted': [job: Job];
 }>();
 
-// Excel file upload
-const selectedFile = ref<File | null>(null);
-const fileInput = ref<HTMLInputElement | null>(null);
-const isDragOver = ref(false);
-const uploadError = ref<string | null>(null);
-const processing = ref(false);
-
-// Jobs preview
-interface JobPreview {
-  payload: {
-    upd_id: string;
-    trace_file_path: string;
-    modification_file: string;
-  };
-  status: 'pending' | 'submitting' | 'submitted' | 'error';
-  error?: string;
-}
-
-const jobsPreview = ref<JobPreview[]>([]);
-const submittingBatch = ref(false);
-const submissionProgress = ref({ current: 0, total: 0 });
-const submissionSummary = ref<{ successful: number; failed: number; total: number } | null>(null);
+// Job submission
+const payloadText = ref('{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}');
+const payloadError = ref<string | null>(null);
+const submitting = ref(false);
 
 // Jobs data
 const jobs = ref<Job[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
-const autoRefresh = ref(true);
 const isLive = ref(false);
 const jobHistory = ref<Map<string, Job[]>>(new Map());
 
@@ -531,6 +395,15 @@ let refreshTimer: NodeJS.Timeout | null = null;
 
 const isOwner = computed(() => {
   return props.pool.user_id === props.userId;
+});
+
+const isValidJson = computed(() => {
+  try {
+    JSON.parse(payloadText.value);
+    return true;
+  } catch {
+    return false;
+  }
 });
 
 const userJobs = computed(() => {
@@ -554,239 +427,6 @@ const jobStats = computed(() => {
   return stats;
 });
 
-// File upload methods
-const triggerFileInput = () => {
-  fileInput.value?.click();
-};
-
-const handleFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (file) {
-    validateAndSetFile(file);
-  }
-};
-
-const handleFileDrop = (event: DragEvent) => {
-  event.preventDefault();
-  isDragOver.value = false;
-  
-  const file = event.dataTransfer?.files[0];
-  if (file) {
-    validateAndSetFile(file);
-  }
-};
-
-const validateAndSetFile = (file: File) => {
-  uploadError.value = null;
-  
-  // Check file type
-  const validTypes = [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-    'application/vnd.ms-excel' // .xls
-  ];
-  
-  if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
-    uploadError.value = 'Please select a valid Excel file (.xlsx or .xls)';
-    return;
-  }
-  
-  // Check file size (max 10MB)
-  if (file.size > 10 * 1024 * 1024) {
-    uploadError.value = 'File size must be less than 10MB';
-    return;
-  }
-  
-  selectedFile.value = file;
-  clearPreview(); // Clear any existing preview
-};
-
-const clearFile = () => {
-  selectedFile.value = null;
-  uploadError.value = null;
-  clearPreview();
-  if (fileInput.value) {
-    fileInput.value.value = '';
-  }
-};
-
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-const processExcelFile = async () => {
-  if (!selectedFile.value) return;
-  
-  try {
-    processing.value = true;
-    uploadError.value = null;
-    
-    const arrayBuffer = await selectedFile.value.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    
-    // Get the first worksheet
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    
-    // Convert to JSON
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-    
-    if (jsonData.length < 2) {
-      throw new Error('Excel file must contain at least a header row and one data row');
-    }
-    
-    // Get headers
-    const headers = jsonData[0] as string[];
-    const requiredColumns = ['upd_id', 'trace_file_path', 'modification_file'];
-    
-    // Check if all required columns exist
-    const missingColumns = requiredColumns.filter(col => 
-      !headers.some(header => header.toLowerCase().trim() === col.toLowerCase())
-    );
-    
-    if (missingColumns.length > 0) {
-      throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
-    }
-    
-    // Find column indices
-    const columnIndices = requiredColumns.reduce((acc, col) => {
-      const index = headers.findIndex(header => 
-        header.toLowerCase().trim() === col.toLowerCase()
-      );
-      acc[col] = index;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    // Process data rows
-    const dataRows = jsonData.slice(1) as any[][];
-    const jobs: JobPreview[] = [];
-    
-    for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i];
-      
-      // Skip empty rows
-      if (!row || row.every(cell => !cell || cell.toString().trim() === '')) {
-        continue;
-      }
-      
-      const updId = row[columnIndices.upd_id]?.toString().trim();
-      const traceFilePath = row[columnIndices.trace_file_path]?.toString().trim();
-      const modificationFile = row[columnIndices.modification_file]?.toString().trim();
-      
-      // Validate required fields
-      if (!updId || !traceFilePath || !modificationFile) {
-        console.warn(`Skipping row ${i + 2}: Missing required data`);
-        continue;
-      }
-      
-      jobs.push({
-        payload: {
-          upd_id: updId,
-          trace_file_path: traceFilePath,
-          modification_file: modificationFile
-        },
-        status: 'pending'
-      });
-    }
-    
-    if (jobs.length === 0) {
-      throw new Error('No valid job data found in the Excel file');
-    }
-    
-    jobsPreview.value = jobs;
-    
-  } catch (error) {
-    console.error('Error processing Excel file:', error);
-    uploadError.value = error instanceof Error ? error.message : 'Failed to process Excel file';
-  } finally {
-    processing.value = false;
-  }
-};
-
-const clearPreview = () => {
-  jobsPreview.value = [];
-  submissionSummary.value = null;
-  submissionProgress.value = { current: 0, total: 0 };
-};
-
-const submitAllJobs = async () => {
-  if (!jobsPreview.value.length) return;
-  
-  try {
-    submittingBatch.value = true;
-    submissionProgress.value = { current: 0, total: jobsPreview.value.length };
-    
-    let successful = 0;
-    let failed = 0;
-    
-    for (let i = 0; i < jobsPreview.value.length; i++) {
-      const jobPreview = jobsPreview.value[i];
-      
-      if (jobPreview.status === 'submitted') {
-        continue; // Skip already submitted jobs
-      }
-      
-      try {
-        // Update status to submitting
-        jobPreview.status = 'submitting';
-        submissionProgress.value.current = i + 1;
-        
-        // Submit the job
-        const job = await ApiService.submitJob(props.pool.id, jobPreview.payload, props.userId);
-        
-        // Update status to submitted
-        jobPreview.status = 'submitted';
-        successful++;
-        
-        emit('job-submitted', job);
-        
-        // Small delay to avoid overwhelming the server
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-      } catch (error) {
-        console.error(`Error submitting job ${i + 1}:`, error);
-        jobPreview.status = 'error';
-        jobPreview.error = error instanceof Error ? error.message : 'Submission failed';
-        failed++;
-      }
-    }
-    
-    // Set summary
-    submissionSummary.value = {
-      successful,
-      failed,
-      total: jobsPreview.value.length
-    };
-    
-    // Refresh jobs list
-    await loadJobs();
-    
-  } catch (error) {
-    console.error('Error in batch submission:', error);
-  } finally {
-    submittingBatch.value = false;
-  }
-};
-
-const getFileName = (filePath: string) => {
-  return filePath.split('/').pop() || filePath.split('\\').pop() || filePath;
-};
-
-const formatJobStatus = (status: string) => {
-  switch (status) {
-    case 'pending': return 'Pending';
-    case 'submitting': return 'Submitting...';
-    case 'submitted': return 'Submitted';
-    case 'error': return 'Error';
-    default: return status;
-  }
-};
-
-// Job management methods
 const loadJobs = async () => {
   try {
     loading.value = true;
@@ -834,6 +474,30 @@ const loadHistoryJobs = async () => {
   }
 };
 
+const submitJob = async () => {
+  if (!validatePayload()) return;
+  
+  try {
+    submitting.value = true;
+    
+    const payload = JSON.parse(payloadText.value);
+    const job = await ApiService.submitJob(props.pool.id, payload, props.userId);
+    
+    // Clear form
+    payloadText.value = '{\n  "task": "example_task",\n  "parameters": {\n    "input": "sample_data",\n    "timeout": 300\n  }\n}';
+    
+    // Refresh jobs
+    await loadJobs();
+    
+    emit('job-submitted', job);
+  } catch (error) {
+    console.error('Error submitting job:', error);
+    payloadError.value = 'Failed to submit job. Please try again.';
+  } finally {
+    submitting.value = false;
+  }
+};
+
 const clearJobs = async () => {
   try {
     clearing.value = true;
@@ -855,13 +519,28 @@ const clearJobs = async () => {
   }
 };
 
+const validatePayload = () => {
+  payloadError.value = null;
+  
+  if (!payloadText.value.trim()) {
+    payloadError.value = 'Payload is required';
+    return false;
+  }
+  
+  try {
+    JSON.parse(payloadText.value);
+    return true;
+  } catch (e) {
+    payloadError.value = 'Invalid JSON format. Please check your syntax.';
+    return false;
+  }
+};
+
 const startAutoRefresh = () => {
   if (refreshTimer) clearInterval(refreshTimer);
   
   refreshTimer = setInterval(() => {
-    if (autoRefresh.value) {
-      loadJobs();
-    }
+    loadJobs();
   }, 3000);
 };
 
@@ -872,39 +551,66 @@ const stopAutoRefresh = () => {
   }
 };
 
-const toggleAutoRefresh = () => {
-  autoRefresh.value = !autoRefresh.value;
-  if (autoRefresh.value) {
-    startAutoRefresh();
-  } else {
-    stopAutoRefresh();
-    isLive.value = false;
-  }
-};
-
 const isRecentlyUpdated = (job: Job) => {
   const updateTime = new Date(job.updated_at).getTime();
   const now = new Date().getTime();
   return (now - updateTime) < 10000; // Updated within last 10 seconds
 };
 
+const getElapsedTime = (startTime: string) => {
+  const start = new Date(startTime).getTime();
+  const now = new Date().getTime();
+  const diffInMinutes = Math.floor((now - start) / (1000 * 60));
+  
+  if (diffInMinutes < 60) return `${diffInMinutes}m`;
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ${diffInMinutes % 60}m`;
+  return `${Math.floor(diffInMinutes / 1440)}d`;
+};
+
+const getProgressSpeed = (job: Job) => {
+  const speed = getProgressSpeedValue(job);
+  return speed > 0 ? `${speed.toFixed(1)}` : null;
+};
+
+const getProgressSpeedValue = (job: Job) => {
+  const history = jobHistory.value.get(job.id);
+  if (!history || history.length < 2) return 0;
+  
+  const recent = history.slice(-5);
+  if (recent.length < 2) return 0;
+  
+  const firstEntry = recent[0];
+  const lastEntry = recent[recent.length - 1];
+  
+  const progressDiff = (lastEntry.progress || 0) - (firstEntry.progress || 0);
+  const timeDiff = new Date(lastEntry.timestamp || lastEntry.updated_at).getTime() - 
+                   new Date(firstEntry.timestamp || firstEntry.updated_at).getTime();
+  
+  if (timeDiff <= 0 || progressDiff <= 0) return 0;
+  
+  const minutesDiff = timeDiff / (1000 * 60);
+  return progressDiff / minutesDiff;
+};
+
+const getETA = (job: Job) => {
+  const speed = getProgressSpeedValue(job);
+  if (speed <= 0 || !job.progress) return null;
+  
+  const remainingProgress = 100 - job.progress;
+  const minutesRemaining = remainingProgress / speed;
+  
+  if (minutesRemaining < 60) return `${Math.round(minutesRemaining)}m`;
+  if (minutesRemaining < 1440) return `${Math.round(minutesRemaining / 60)}h`;
+  return `${Math.round(minutesRemaining / 1440)}d`;
+};
+
 const getTaskName = (payload: Record<string, any>) => {
-  if (payload.upd_id) {
-    return `UPD ${payload.upd_id}`;
-  }
   return payload.task || payload.name || payload.type || 'Unknown Task';
 };
 
 const getTaskDetails = (payload: Record<string, any>) => {
   const details = [];
-  if (payload.trace_file_path) {
-    const fileName = getFileName(payload.trace_file_path);
-    details.push(`Trace: ${fileName}`);
-  }
-  if (payload.modification_file) {
-    const fileName = getFileName(payload.modification_file);
-    details.push(`Mod: ${fileName}`);
-  }
+  if (payload.parameters?.input) details.push(`Input: ${String(payload.parameters.input).slice(0, 15)}...`);
   if (payload.timeout) details.push(`${payload.timeout}s`);
   return details.join(' • ') || 'No details';
 };
@@ -1051,7 +757,7 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.history-button, .toggle-button, .clear-button {
+.history-button, .clear-button {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1077,13 +783,7 @@ onUnmounted(() => {
   background: rgba(254, 202, 202, 0.2);
 }
 
-.toggle-button.active {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.05);
-  color: #059669;
-}
-
-.history-button:hover, .toggle-button:hover {
+.history-button:hover {
   border-color: #d1d5db;
   background: #f9fafb;
 }
@@ -1092,215 +792,108 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
-/* Excel File Upload */
+/* Job Submission */
 .submission-section {
   margin-bottom: 32px;
   padding-bottom: 32px;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.submission-header {
-  margin-bottom: 24px;
-}
-
-.submission-title {
-  font-size: 16px;
+.form-label {
+  display: block;
+  font-size: 14px;
   font-weight: 600;
   color: #1a1d29;
-  margin: 0 0 4px 0;
+  margin-bottom: 12px;
 }
 
-.submission-subtitle {
-  color: #5f6368;
-  margin: 0;
-  font-size: 14px;
-}
-
-.file-upload-area {
-  border: 2px dashed #e8eaed;
+.textarea-container {
+  position: relative;
+  border: 2px solid #e8eaed;
   border-radius: 12px;
-  padding: 32px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: #fafbfc;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.file-upload-area:hover {
-  border-color: #dadce0;
-  background: #f8f9fa;
-}
-
-.file-upload-area.drag-over {
+.textarea-container:focus-within {
   border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  background: white;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
-.file-upload-area.has-file {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.05);
-}
-
-.file-upload-area.has-error {
-  border-color: #ea4335;
-  background: rgba(234, 67, 53, 0.05);
-}
-
-.upload-prompt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.upload-icon {
-  font-size: 48px;
-  opacity: 0.6;
-}
-
-.upload-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1d29;
-  margin: 0;
-}
-
-.upload-subtitle {
-  font-size: 14px;
-  color: #5f6368;
-  margin: 0;
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  justify-content: center;
-}
-
-.file-icon {
-  font-size: 32px;
-}
-
-.file-details {
-  text-align: left;
-}
-
-.file-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1d29;
-  margin: 0 0 4px 0;
-}
-
-.file-size {
-  font-size: 14px;
-  color: #5f6368;
-  margin: 0;
-}
-
-.remove-file-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: rgba(234, 67, 53, 0.1);
-  border: 1px solid rgba(234, 67, 53, 0.2);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #ea4335;
-}
-
-.remove-file-button:hover {
-  background: rgba(234, 67, 53, 0.15);
-  border-color: rgba(234, 67, 53, 0.3);
-}
-
-.remove-icon {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.file-actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.process-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+.payload-textarea {
+  width: 100%;
   border: none;
-  padding: 12px 24px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
+  border-radius: 10px 10px 0 0;
+  padding: 16px;
   font-size: 14px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  line-height: 1.6;
+  resize: vertical;
+  background: transparent;
+  color: #1a1d29;
+  min-height: 120px;
 }
 
-.process-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+.payload-textarea:focus {
+  outline: none;
 }
 
-.process-button:disabled {
-  background: #9aa0a6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* Jobs Preview */
-.jobs-preview {
-  margin-top: 24px;
-}
-
-.preview-header {
+.textarea-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+  background: rgba(250, 251, 252, 0.8);
+  border-radius: 0 0 10px 10px;
 }
 
-.preview-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1d29;
-  margin: 0;
-}
-
-.preview-actions {
+.validation-status {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.clear-preview-button {
+.status-indicator {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #f8f9fa;
-  color: #5f6368;
-  border: 2px solid #e8eaed;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.clear-preview-button:hover {
-  background: #f1f3f4;
-  border-color: #dadce0;
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
 }
 
-.submit-all-button {
+.status-indicator.valid {
+  color: #00b894;
+}
+
+.status-indicator.valid .status-dot {
+  background: #00b894;
+}
+
+.status-indicator.invalid {
+  color: #ea4335;
+}
+
+.status-indicator.invalid .status-dot {
+  background: #ea4335;
+}
+
+.status-indicator.empty {
+  color: #9aa0a6;
+}
+
+.status-indicator.empty .status-dot {
+  background: #9aa0a6;
+}
+
+.submit-button {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1309,177 +902,58 @@ onUnmounted(() => {
   border: none;
   padding: 8px 16px;
   border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
   font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.submit-all-button:hover:not(:disabled) {
+.submit-button:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-.submit-all-button:disabled {
+.submit-button:disabled {
   background: #9aa0a6;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-.preview-table-container {
-  border: 1px solid #e8eaed;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-
-.preview-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.preview-table th {
-  background: #f8f9fa;
-  color: #1a1d29;
-  font-weight: 600;
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #e8eaed;
-}
-
-.preview-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.preview-row {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.preview-row:hover {
-  background: #f8f9fa;
-}
-
-.preview-row.submitted {
-  background: rgba(16, 185, 129, 0.05);
-}
-
-.preview-row.error {
-  background: rgba(234, 67, 53, 0.05);
-}
-
-.preview-row.submitting {
-  background: rgba(102, 126, 234, 0.05);
-}
-
-.row-number {
-  width: 60px;
-  text-align: center;
-  font-weight: 600;
-  color: #5f6368;
-}
-
-.upd-id {
-  width: 120px;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  font-weight: 600;
-}
-
-.file-path {
-  display: block;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #1a1d29;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.status-badge.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.status-badge.submitting {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.status-badge.submitted {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-badge.error {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.status-spinner {
-  width: 12px;
-  height: 12px;
+.loading-spinner {
+  width: 14px;
+  height: 14px;
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
-.submission-summary {
-  background: #f8f9fa;
-  border: 1px solid #e8eaed;
-  border-radius: 12px;
-  padding: 20px;
+.loading-spinner.small {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  margin: 0;
 }
 
-.summary-stats {
+.error-message {
   display: flex;
-  gap: 24px;
-  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: #ea4335;
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 12px 16px;
+  background: #fef7f7;
+  border-radius: 8px;
+  border: 1px solid #fce8e6;
 }
 
-.summary-stat {
-  text-align: center;
+.error-icon {
+  font-size: 16px;
 }
 
-.stat-value {
-  display: block;
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.summary-stat.success .stat-value {
-  color: #059669;
-}
-
-.summary-stat.failed .stat-value {
-  color: #dc2626;
-}
-
-.summary-stat.total .stat-value {
-  color: #1a1d29;
-}
-
-/* Jobs Table */
+/* Jobs Section */
 .jobs-section {
   /* Section styling */
 }
@@ -1531,170 +1005,6 @@ onUnmounted(() => {
   color: #991b1b;
 }
 
-.jobs-table-container {
-  border: 1px solid #e8eaed;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.jobs-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.jobs-table th {
-  background: #f8f9fa;
-  color: #1a1d29;
-  font-weight: 600;
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #e8eaed;
-}
-
-.jobs-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  vertical-align: middle;
-}
-
-.job-row {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.job-row:hover {
-  background: #f8f9fa;
-}
-
-.job-row.recently-updated {
-  background: rgba(16, 185, 129, 0.05);
-}
-
-.job-row.completed {
-  background: rgba(16, 185, 129, 0.02);
-}
-
-.job-row.failed {
-  background: rgba(234, 67, 53, 0.02);
-}
-
-.job-id .id-text {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  font-size: 13px;
-  color: #5f6368;
-  font-weight: 600;
-  background: #f3f4f6;
-  padding: 3px 6px;
-  border-radius: 4px;
-}
-
-.task-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.task-title {
-  font-weight: 600;
-  color: #1a1d29;
-  font-size: 14px;
-}
-
-.task-subtitle {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.status .status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.status-badge.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.status-badge.in_progress {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.status-badge.completed {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-badge.failed {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.progress-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.progress-bar-small {
-  width: 60px;
-  height: 6px;
-  background: #f0f0f0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-fill-small {
-  height: 100%;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  border-radius: 3px;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.progress-text {
-  font-size: 12px;
-  color: #5f6368;
-  font-weight: 600;
-  min-width: 35px;
-}
-
-.no-progress {
-  color: #9ca3af;
-  font-style: italic;
-}
-
-.time-text {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.action-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: #f3f4f6;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.action-button:hover {
-  background: #e5e7eb;
-  transform: scale(1.05);
-}
-
-.action-icon {
-  font-size: 14px;
-}
-
 /* Loading, Error, Empty States */
 .loading-state, .error-state, .empty-state {
   display: flex;
@@ -1713,13 +1023,6 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
-}
-
-.loading-spinner.small {
-  width: 16px;
-  height: 16px;
-  border-width: 2px;
-  margin: 0;
 }
 
 .loading-text, .error-message, .empty-message {
@@ -1758,22 +1061,230 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #ea4335;
-  font-size: 14px;
-  margin-top: 8px;
-  padding: 12px 16px;
-  background: #fef7f7;
-  border-radius: 8px;
-  border: 1px solid #fce8e6;
+/* Jobs Grid */
+.jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
 }
 
-.error-message .error-icon {
-  font-size: 16px;
-  margin: 0;
+.job-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.job-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.job-card.pending::before {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.job-card.in_progress::before {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.job-card.completed::before {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.job-card.failed::before {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.job-card:hover {
+  border-color: #d1d5db;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.job-card.recently-updated {
+  border-color: #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+  animation: glow 2s ease-in-out;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.job-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.job-id {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+  background: #f3f4f6;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+.job-status {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.job-status.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.job-status.in_progress {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.job-status.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.job-status.failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.time-elapsed {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Progress Section */
+.progress-section {
+  margin-bottom: 16px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.progress-percentage {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1d29;
+}
+
+.progress-bar-container {
+  margin-bottom: 8px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar.large {
+  height: 12px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Payload Preview */
+.payload-preview {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-name {
+  font-weight: 600;
+  color: #1a1d29;
+  font-size: 13px;
+}
+
+.task-details {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* Card Footer */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timestamps {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.details-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.details-button:hover {
+  background: #e5e7eb;
+  transform: scale(1.05);
 }
 
 /* Modal Styles */
@@ -1853,6 +1364,7 @@ onUnmounted(() => {
   padding: 0 24px 24px 24px;
 }
 
+/* Detail Grid */
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1890,34 +1402,10 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.progress-bar.large {
-  width: 120px;
-  height: 8px;
-  background: #f0f0f0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  border-radius: 4px;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.progress-percentage {
-  font-size: 12px;
-  color: #5f6368;
-  font-weight: 600;
-}
-
+/* Payload Section */
 .payload-section {
   border-top: 1px solid #e5e7eb;
   padding-top: 20px;
-}
-
-.payload-section .detail-label {
-  margin-bottom: 12px;
 }
 
 .payload-full {
@@ -1933,7 +1421,7 @@ onUnmounted(() => {
   overflow-x: auto;
 }
 
-/* History and Clear Modal Styles */
+/* History Filters */
 .history-filters {
   display: flex;
   gap: 12px;
@@ -1987,6 +1475,7 @@ onUnmounted(() => {
   animation: spin 1s linear infinite;
 }
 
+/* History List */
 .history-list {
   display: flex;
   flex-direction: column;
@@ -2032,6 +1521,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* Clear Jobs Modal */
 .clear-options {
   display: flex;
   flex-direction: column;
@@ -2178,6 +1668,11 @@ onUnmounted(() => {
   50% { opacity: 0.5; }
 }
 
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.4); }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .job-manager {
@@ -2195,32 +1690,13 @@ onUnmounted(() => {
     flex-wrap: wrap;
   }
   
-  .preview-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  
-  .preview-actions {
-    justify-content: space-between;
-  }
-  
-  .preview-table-container {
-    overflow-x: auto;
-  }
-  
-  .jobs-table-container {
-    overflow-x: auto;
+  .jobs-grid {
+    grid-template-columns: 1fr;
   }
   
   .jobs-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
-  }
-  
-  .summary-stats {
-    flex-direction: column;
     gap: 12px;
   }
   
